@@ -1,0 +1,20 @@
+BP/
+├── backend/
+│   ├── app.py              ← Flask API
+│   ├── models.py           ← SQLAlchemy modely
+│   ├── scraper/            ← tvoje web-scraping skripty
+│   ├── database/           ← migrácie, inicializácia DB
+│   └── requirements.txt
+│
+├── frontend/
+│   ├── src/
+│   │   ├── components/
+│   │   ├── pages/
+│   │   ├── App.jsx
+│   │   └── main.jsx
+│   ├── package.json
+│   └── vite.config.js
+│
+├── .gitignore
+├── README.md
+└── docker-compose.yml      ← ak sa rozhodneš použiť Docker

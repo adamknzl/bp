@@ -1,0 +1,94 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model branch {
+  branch_id       String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  organization_id String? @db.Uuid
+  city            String? @db.VarChar(100)
+  street          String? @db.VarChar(150)
+  email           String? @db.VarChar(120)
+  tel_num         String? @db.VarChar(30)
+  lat             Float?
+  lon             Float?
+
+  @@unique([organization_id, lat, lon], map: "uq_branch_org_lat_lon")
+}
+
+model category {
+  category_id           String                  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name                  String?                 @unique(map: "category_name_unique") @db.VarChar(100)
+  organization_category organization_category[]
+}
+
+model data_source {
+  source_id    String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name         String         @db.VarChar(100)
+  url          String
+  last_scraped DateTime?      @db.Timestamp(6)
+  organization organization[]
+}
+
+model npo_manager {
+  user_id         String @db.Uuid
+  organization_id String @db.Uuid
+  user            user   @relation(fields: [user_id], references: [user_id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@id([user_id, organization_id])
+}
+
+model organization {
+  organization_id    String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  source_id          String?        @db.Uuid
+  parent_id          String?        @db.Uuid
+  name               String         @db.VarChar(200)
+  ico                String         @unique @db.VarChar(20)
+  legal_form         String?        @db.VarChar(100)
+  web_url            String?
+  created_at         DateTime       @db.Timestamp(6)
+  hq_address         String?
+  size_category      String?        @db.VarChar(50)
+  size_category_id   String?        @db.Uuid
+  description        String?
+  emails             String[]       @db.VarChar(120)
+  tel_numbers        String[]       @db.VarChar(30)
+  organization       organization?  @relation("organizationToorganization", fields: [parent_id], references: [organization_id], onDelete: NoAction, onUpdate: NoAction)
+  other_organization organization[] @relation("organizationToorganization")
+  size_category_rel  size_category? @relation(fields: [size_category_id], references: [cat_id], onDelete: NoAction, onUpdate: NoAction)
+  data_source        data_source?   @relation(fields: [source_id], references: [source_id], onDelete: NoAction, onUpdate: NoAction)
+}
+
+model organization_category {
+  organization_id String   @db.Uuid
+  category_id     String   @db.Uuid
+  category        category @relation(fields: [category_id], references: [category_id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@id([organization_id, category_id])
+}
+
+model role {
+  role_id     String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name        String  @db.VarChar(50)
+  description String?
+}
+
+model size_category {
+  cat_id       String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  label        String         @db.VarChar(50)
+  min_emp      Int
+  max_emp      Int?
+  organization organization[]
+}
+
+model user {
+  user_id       String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name          String        @db.VarChar(100)
+  email         String        @unique @db.VarChar(120)
+  password_hash String
+  created_at    DateTime?     @default(now()) @db.Timestamp(6)
+  npo_manager   npo_manager[]
+}

@@ -1,27 +1,33 @@
-# Python
-__pycache__/
-*.py[cod]
-*.pyo
-*.pyd
-env/
-venv/
-.env
-
-# Django / Flask instance folders
-instance/
-*.db
-
-# React / Node
 node_modules/
+*/node_modules/
+*/*/node_modules/
+
+.env
+.env.*
+!.env.example
+
 dist/
 build/
+.next/
+out/
+
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
-
-# VS Code
-.vscode/
-
-# System files
 .DS_Store
 Thumbs.db
+
+/prisma/generated/
+
+venv/
+.venv/
+env/
+ENV/
+
+__pycache__/
+*.py[cod]
+*$py.class
+
+*.log
+.pytest_cache/
+.scrapy/

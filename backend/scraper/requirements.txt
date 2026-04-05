@@ -1,0 +1,5 @@
+ddgs==9.10.0
+openai==2.30.0
+Requests==2.33.0
+SQLAlchemy==2.0.48
+Unidecode==1.4.0
