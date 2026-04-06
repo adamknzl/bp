@@ -88,3 +88,23 @@ export const deleteOrganization = async (req: Request, res: Response): Promise<v
         });
     }
 }
+
+export const getFiltersMetadata = async (req: Request, res: Response): Promise<void> => {
+    try {
+        const categories = await OrgService.getCategories();
+        const sizes = await OrgService.getSizeCategories();
+
+        res.status(200).json({
+            success: true,
+            data: {
+                categories,
+                sizes
+            }
+        });
+    } catch (error) {
+        res.status(500).json({
+            success: false,
+            message: "Internal server error while fetching filters"
+        });
+    }
+};
