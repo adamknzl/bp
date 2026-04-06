@@ -21,6 +21,22 @@ export const getAllOrganizations = async (req: Request, res: Response): Promise<
             };
         }
 
+        if (req.query.size) {
+            filters.size_category_id = req.query.size as string;
+        }
+
+        if (req.query.categories) {
+            const categoryIds = (req.query.categories as string).split(',');
+            
+            filters.organization_category = {
+                some: {
+                    category_id: {
+                        in: categoryIds
+                    }
+                }
+            };
+        }
+
         const orgs = await OrgService.getOrganizations(limit, filters);
 
         res.status(200).json({

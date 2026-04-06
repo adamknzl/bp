@@ -47,11 +47,15 @@ export default function OrganizationList() {
   const [organizations, setOrganizations] = useState<Organization[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [sizes, setSizes] = useState<SizeCategory[]>([]);
+  const [selectedSize, setSelectedSize] = useState<string>("");
+  const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
   
   const [showAllCategories, setShowAllCategories] = useState<boolean>(false);
   
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
+
+  const hasActiveFilters = selectedSize !== "" || selectedCategories.length > 0;
 
   useEffect(() => {
     const fetchData = async () => {
@@ -80,8 +84,60 @@ export default function OrganizationList() {
     fetchData();
   }, []);
 
-  if (loading) return <div className="p-12 text-center text-gray-500 font-medium">Loading data...</div>;
-  if (error) return <div className="p-12 text-center text-red-500 font-bold">{error}</div>;
+  const toggleCategory = (categoryId: string) => {
+    setSelectedCategories(prev => 
+      prev.includes(categoryId)
+        ? prev.filter(id => id !== categoryId)
+        : [...prev, categoryId]
+    );
+  };
+
+  const handleApplyFilters = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const params = new URLSearchParams();
+      
+      if (selectedSize) {
+        params.append('size', selectedSize);
+      }
+      if (selectedCategories.length > 0) {
+        params.append('categories', selectedCategories.join(','));
+      }
+
+      const response = await fetch(`http://localhost:3000/api/organizations?${params.toString()}`);
+      if (!response.ok) throw new Error("Chyba pri filtrovaní dát");
+      
+      const result = await response.json();
+      setOrganizations(result.data);
+    } catch (err) {
+      setError("Nepodarilo sa aplikovať filtre.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Nová funkcia na zrušenie všetkých filtrov
+  const handleClearFilters = async () => {
+    setSelectedSize("");
+    setSelectedCategories([]);
+    setLoading(true);
+    setError(null);
+    try {
+      const response = await fetch('http://localhost:3000/api/organizations');
+      if (!response.ok) throw new Error("Chyba pri obnove dát");
+      
+      const result = await response.json();
+      setOrganizations(result.data);
+    } catch (err) {
+      setError("Nepodarilo sa obnoviť zoznam.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (loading && organizations.length === 0) return <div className="p-12 text-center text-gray-500 font-medium">Loading data...</div>;
+  if (error && organizations.length === 0) return <div className="p-12 text-center text-red-500 font-bold">{error}</div>;
 
   const displayedCategories = showAllCategories ? categories : categories.slice(0, 4);
 
@@ -94,7 +150,18 @@ export default function OrganizationList() {
         {/* Filters */}
         <aside className="w-full lg:w-1/4 lg:sticky lg:top-24 self-start">
           <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
-            <h2 className="text-xl font-bold text-[#005A92] mb-6 font-['Manrope',sans-serif]">Filters</h2>
+            
+            <div className="flex justify-between items-center mb-6">
+              <h2 className="text-xl font-bold text-[#005A92] font-['Manrope',sans-serif]">Filters</h2>
+              {hasActiveFilters && (
+                <button 
+                  onClick={handleClearFilters}
+                  className="text-xs font-bold text-red-500 hover:text-red-700 uppercase tracking-wider transition"
+                >
+                  Zrušiť filtre
+                </button>
+              )}
+            </div>
             
             <div className="mb-6">
               <label className="block text-xs font-bold text-gray-500 mb-2 uppercase tracking-wider">Region</label>
@@ -105,7 +172,11 @@ export default function OrganizationList() {
             
             <div className="mb-6">
               <label className="block text-xs font-bold text-gray-500 mb-2 uppercase tracking-wider">Size Category</label>
-              <select className="w-full p-2.5 bg-gray-50 border border-gray-200 rounded text-gray-700 text-sm focus:outline-none">
+              <select 
+                value={selectedSize}
+                onChange={(e) => setSelectedSize(e.target.value)}
+                className="w-full p-2.5 bg-gray-50 border border-gray-200 rounded text-gray-700 text-sm focus:outline-none"
+              >
                 <option value="">All sizes</option>
                 {sizes.map((size) => (
                   <option key={size.cat_id} value={size.cat_id}>
@@ -123,6 +194,8 @@ export default function OrganizationList() {
                     <input 
                       type="checkbox" 
                       value={category.category_id}
+                      checked={selectedCategories.includes(category.category_id)}
+                      onChange={() => toggleCategory(category.category_id)}
                       className="w-4 h-4 rounded border-gray-300 text-[#005A92] focus:ring-[#005A92]" 
                     />
                     <span className="text-sm text-gray-700">{category.name}</span>
@@ -141,8 +214,12 @@ export default function OrganizationList() {
               )}
             </div>
             
-            <button className="w-full py-3 bg-[#005A92] text-white font-semibold rounded hover:bg-blue-800 transition">
-              Použít filtry
+            <button 
+              onClick={handleApplyFilters}
+              disabled={loading}
+              className="w-full py-3 bg-[#005A92] text-white font-semibold rounded hover:bg-blue-800 transition disabled:opacity-50"
+            >
+              {loading ? 'Filtrujem...' : 'Použít filtry'}
             </button>
           </div>
         </aside>
@@ -150,34 +227,40 @@ export default function OrganizationList() {
         {/* Main content */}
         <main className="w-full lg:w-3/4">
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-            {organizations.map((org) => (
-              <div key={org.organization_id} className="bg-white rounded-xl p-6 shadow-sm border border-gray-100 flex flex-col h-full hover:shadow-md transition-shadow">
-                <div className="flex gap-2 mb-4 flex-wrap">
-                   {/* Category tags */}
-                   {org.organization_category?.map((oc) => {
-                     const colorClass = getCategoryColor(oc.category.name);
-                     return (
-                       <span 
-                         key={oc.category.category_id} 
-                         className={`px-2.5 py-1 text-[10px] font-bold rounded-full uppercase ${colorClass}`}
-                       >
-                         {oc.category.name}
-                       </span>
-                     );
-                   })}
-                </div>
-                <h3 className="text-xl font-bold text-[#005A92] mb-3 font-['Manrope',sans-serif] leading-tight">{org.name}</h3>
-                <p className="text-gray-500 text-sm mb-6 flex-grow leading-relaxed">
-                  Informácie o poslaní tejto organizácie momentálne dopĺňame z našej databázy.
-                </p>
-                <Link 
-                  to={`/org/${org.organization_id}`}
-                  className="w-full py-2.5 bg-[#E9F1FF] text-[#00426D] text-center font-bold rounded hover:text-white hover:bg-[#00426D] transition text-sm"
-                >
-                  Zobrazit detail
-                </Link>
+            {organizations.length === 0 && !loading ? (
+              <div className="col-span-full py-12 text-center text-gray-500">
+                Pre zvolené filtre sa nenašli žiadne organizácie.
               </div>
-            ))}
+            ) : (
+              organizations.map((org) => (
+                <div key={org.organization_id} className="bg-white rounded-xl p-6 shadow-sm border border-gray-100 flex flex-col h-full hover:shadow-md transition-shadow">
+                  <div className="flex gap-2 mb-4 flex-wrap">
+                     {/* Category tags */}
+                     {org.organization_category?.map((oc) => {
+                       const colorClass = getCategoryColor(oc.category.name);
+                       return (
+                         <span 
+                           key={oc.category.category_id} 
+                           className={`px-2.5 py-1 text-[10px] font-bold rounded-full uppercase ${colorClass}`}
+                         >
+                           {oc.category.name}
+                         </span>
+                       );
+                     })}
+                  </div>
+                  <h3 className="text-xl font-bold text-[#005A92] mb-3 font-['Manrope',sans-serif] leading-tight">{org.name}</h3>
+                  <p className="text-gray-500 text-sm mb-6 flex-grow leading-relaxed">
+                    Informácie o poslaní tejto organizácie momentálne dopĺňame z našej databázy.
+                  </p>
+                  <Link 
+                    to={`/org/${org.organization_id}`}
+                    className="w-full py-2.5 bg-[#E9F1FF] text-[#00426D] text-center font-bold rounded hover:text-white hover:bg-[#00426D] transition text-sm"
+                  >
+                    Zobrazit detail
+                  </Link>
+                </div>
+              ))
+            )}
           </div>
         </main>
 
