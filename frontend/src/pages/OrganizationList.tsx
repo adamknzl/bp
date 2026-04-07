@@ -226,6 +226,22 @@ export default function OrganizationList() {
 
         {/* Main content */}
         <main className="w-full lg:w-3/4">
+          <div className="bg-[#E2F5EA] border border-[#A8E6CF] rounded-xl p-6 mb-8 flex items-center justify-between">
+            <div className="flex items-center gap-5">
+              <div className="w-14 h-14 bg-white rounded-lg flex items-center justify-center shadow-sm">
+                 <svg className="w-7 h-7 text-[#2D6A4F] rotate-45" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"></path></svg>
+              </div>
+              <div>
+                <h3 className="text-lg font-bold text-[#2D6A4F] font-['Manrope',sans-serif]">Find non-profits near me</h3>
+                <p className="text-[#2D6A4F] text-sm opacity-90 mt-1">Display non-profits in your vicinity using GPS.</p>
+              </div>
+            </div>
+            <button className="flex items-center gap-2 px-5 py-2.5 bg-[#A8E6CF] text-[#2D6A4F] font-bold rounded hover:bg-[#8ee0c2] transition cursor-pointer">
+              Find non-profits near me 
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M14 5l7 7m0 0l-7 7m7-7H3"></path></svg>
+            </button>
+          </div>
+
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
             {organizations.length === 0 && !loading ? (
               <div className="col-span-full py-12 text-center text-gray-500">

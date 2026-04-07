@@ -37,6 +37,12 @@ export const getOrganizationById = async (id: string) => {
         const organization = await prisma.organization.findUnique({
             where: {
                 organization_id: id
+            },
+            include: {
+                organization_category: {
+                    include: { category: true }
+                },
+                branches: true
             }
         });
         return organization;
