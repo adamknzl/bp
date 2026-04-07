@@ -47,8 +47,12 @@ export default function OrganizationList() {
   const [organizations, setOrganizations] = useState<Organization[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [sizes, setSizes] = useState<SizeCategory[]>([]);
-  const [selectedSize, setSelectedSize] = useState<string>("");
-  const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
+  
+  const [selectedSize, setSelectedSize] = useState<string>(() => sessionStorage.getItem('org_filter_size') || "");
+  const [selectedCategories, setSelectedCategories] = useState<string[]>(() => {
+    const saved = sessionStorage.getItem('org_filter_categories');
+    return saved ? JSON.parse(saved) : [];
+  });
   
   const [showAllCategories, setShowAllCategories] = useState<boolean>(false);
   
@@ -60,8 +64,20 @@ export default function OrganizationList() {
   useEffect(() => {
     const fetchData = async () => {
       try {
+        const params = new URLSearchParams();
+        const savedSize = sessionStorage.getItem('org_filter_size') || "";
+        const savedCats = sessionStorage.getItem('org_filter_categories');
+        const parsedCats = savedCats ? JSON.parse(savedCats) : [];
+
+        if (savedSize) {
+          params.append('size', savedSize);
+        }
+        if (parsedCats.length > 0) {
+          params.append('categories', parsedCats.join(','));
+        }
+
         const [orgsRes, filtersRes] = await Promise.all([
-          fetch('http://localhost:3000/api/organizations'),
+          fetch(`http://localhost:3000/api/organizations?${params.toString()}`),
           fetch('http://localhost:3000/api/organizations/filters')
         ]);
 
@@ -96,6 +112,9 @@ export default function OrganizationList() {
     setLoading(true);
     setError(null);
     try {
+      sessionStorage.setItem('org_filter_size', selectedSize);
+      sessionStorage.setItem('org_filter_categories', JSON.stringify(selectedCategories));
+
       const params = new URLSearchParams();
       
       if (selectedSize) {
@@ -121,6 +140,9 @@ export default function OrganizationList() {
   const handleClearFilters = async () => {
     setSelectedSize("");
     setSelectedCategories([]);
+    sessionStorage.removeItem('org_filter_size');
+    sessionStorage.removeItem('org_filter_categories');
+
     setLoading(true);
     setError(null);
     try {
