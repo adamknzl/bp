@@ -239,7 +239,7 @@ export default function OrganizationList() {
             <button 
               onClick={handleApplyFilters}
               disabled={loading}
-              className="w-full py-3 bg-[#005A92] text-white font-semibold rounded hover:bg-blue-800 transition disabled:opacity-50"
+              className="w-full py-3 bg-[#005A92] text-white font-semibold rounded hover:bg-blue-800 transition disabled:opacity-50 cursor-pointer"
             >
               {loading ? 'Filtrujem...' : 'Použít filtry'}
             </button>

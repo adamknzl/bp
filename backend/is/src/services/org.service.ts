@@ -42,7 +42,8 @@ export const getOrganizationById = async (id: string) => {
                 organization_category: {
                     include: { category: true }
                 },
-                branches: true
+                branches: true,
+                other_organization: true
             }
         });
         return organization;

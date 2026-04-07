@@ -16,6 +16,13 @@ interface Branch {
   lon: number | null;
 }
 
+// Nový interface pre detské organizácie (z relácie parent_id)
+interface ChildOrganization {
+  organization_id: string;
+  name: string;
+  hq_address: string | null;
+}
+
 interface OrganizationDetail {
   organization_id: string;
   name: string;
@@ -25,10 +32,12 @@ interface OrganizationDetail {
   web_url: string | null;
   emails: string[];
   tel_numbers: string[];
+  hq_address: string | null;
   organization_category?: {
     category: Category
   }[];
   branches?: Branch[];
+  other_organization?: ChildOrganization[];
 }
 
 const getCategoryColor = (categoryName: string) => {
@@ -86,6 +95,47 @@ export default function OrganizationDetail() {
   if (error) return <div className="p-12 text-center text-red-500 font-bold">{error}</div>;
   if (!org) return null;
 
+  // --- LOGIKA PRE POBOČKY A CENTRÁLU ---
+  // Skontrolujeme, či organizácia má aspoň jedného "potomka" (z OSM alebo z CSV)
+  const hasBranches = (org.branches && org.branches.length > 0) || (org.other_organization && org.other_organization.length > 0);
+  
+  // Tu si zozbierame všetky lokality do jedného poľa, aby sme ich mohli jednoducho vykresliť
+  const locations = [];
+
+  if (hasBranches) {
+    // 1. Ako prvú vždy pridáme centrálu (HQ) pre túto organizáciu
+    locations.push({
+      id: org.organization_id,
+      title: "Centrála organizácie",
+      address: org.hq_address || "Adresa centrály neuvedená",
+      isHQ: true
+    });
+
+    // 2. Pridáme detské organizácie (tvoja štruktúra z CSV Python importu)
+    if (org.other_organization) {
+      org.other_organization.forEach(child => {
+        locations.push({
+          id: child.organization_id,
+          title: child.name,
+          address: child.hq_address || "Adresa neuvedená",
+          isHQ: false
+        });
+      });
+    }
+
+    // 3. Pridáme pobočky z OpenStreetMap (tabuľka branch)
+    if (org.branches) {
+      org.branches.forEach(b => {
+        locations.push({
+          id: b.branch_id,
+          title: b.city || "Pobočka",
+          address: b.street || "Adresa neuvedená",
+          isHQ: false
+        });
+      });
+    }
+  }
+
   return (
     <div className="min-h-screen bg-[#F8F9FA] pb-20">
       <div className="max-w-[1200px] mx-auto px-8 pt-10">
@@ -138,29 +188,32 @@ export default function OrganizationDetail() {
               <h2 className="text-2xl font-bold text-[#005A92] font-['Manrope',sans-serif] mb-6">Branches</h2>
               
               {/* Map Placeholder */}
-              <div className="w-full h-64 bg-gray-200 rounded-xl mb-6 flex items-center justify-center text-gray-400">
-                [ Map Placeholder - Integration with Google Maps / Leaflet ]
+              <div className="w-full h-64 bg-gray-200 rounded-xl mb-6 flex items-center justify-center text-gray-400 border border-gray-300 border-dashed">
+                [ Map Placeholder - Integration with Maps ]
               </div>
 
               {/* Branch List */}
               <div className="space-y-4">
-                {org.branches && org.branches.length > 0 ? (
-                  org.branches.map((branch, index) => (
-                    <div key={branch.branch_id} className="bg-white p-5 rounded-xl flex items-center gap-5 shadow-sm border border-gray-100">
-                      <div className="w-12 h-12 rounded-lg bg-[#E2F5EA] text-[#2D6A4F] flex items-center justify-center flex-shrink-0">
-                        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
+                {hasBranches ? (
+                  locations.map((loc) => (
+                    <div key={loc.id} className="bg-white p-5 rounded-xl flex items-center gap-5 shadow-sm border border-gray-100">
+                      <div className={`w-12 h-12 rounded-lg flex items-center justify-center flex-shrink-0 ${loc.isHQ ? 'bg-[#005A92] text-white' : 'bg-[#E2F5EA] text-[#2D6A4F]'}`}>
+                        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path>
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                        </svg>
                       </div>
                       <div className="flex-grow">
-                        <h4 className="text-lg font-bold text-gray-900">{branch.city || "Pobočka"}</h4>
-                        <p className="text-gray-500 text-sm">{branch.street || "Adresa neuvedená"}</p>
+                        <h4 className="text-lg font-bold text-gray-900">{loc.title}</h4>
+                        <p className="text-gray-500 text-sm">{loc.address}</p>
                       </div>
-                      <div className="hidden sm:block text-xs font-bold text-gray-500">
-                        {index === 0 ? "Hlavní ústředí" : "Pobočka"}
+                      <div className={`hidden sm:block text-xs font-bold uppercase tracking-wider ${loc.isHQ ? 'text-[#005A92]' : 'text-gray-400'}`}>
+                        {loc.isHQ ? "Hlavní ústředí" : "Pobočka"}
                       </div>
                     </div>
                   ))
                 ) : (
-                  <p className="text-gray-500 italic">Táto organizácia nemá evidované žiadne pobočky.</p>
+                  <p className="text-gray-500 italic p-4 bg-gray-50 rounded-lg">Táto organizácia zatiaľ nemá evidované žiadne ďalšie pobočky.</p>
                 )}
               </div>
             </section>
@@ -187,7 +240,7 @@ export default function OrganizationDetail() {
                         <a key={idx} href={`mailto:${email}`} className="block hover:underline">{email}</a>
                       ))
                     ) : (
-                      <span className="text-gray-500">Neuvedené</span>
+                      <span className="text-gray-500 font-normal italic">Neuvedené</span>
                     )}
                   </div>
                 </div>
@@ -204,7 +257,7 @@ export default function OrganizationDetail() {
                         <a key={idx} href={`tel:${phone}`} className="block hover:text-[#005A92]">{phone}</a>
                       ))
                     ) : (
-                      <span className="text-gray-500">Neuvedené</span>
+                      <span className="text-gray-500 font-normal italic">Neuvedené</span>
                     )}
                   </div>
                 </div>
@@ -221,7 +274,7 @@ export default function OrganizationDetail() {
                         {org.web_url.replace(/^https?:\/\//, '')}
                       </a>
                     ) : (
-                      <span className="text-gray-500">Neuvedené</span>
+                      <span className="text-gray-500 font-normal italic">Neuvedené</span>
                     )}
                   </div>
                 </div>
