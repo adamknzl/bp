@@ -81,7 +81,7 @@ export const getCategories = async () => {
 export const getSizeCategories = async () => {
     try {
         return await prisma.size_category.findMany({
-            orderBy: { min_emp: 'asc' } // Zoradíme od najmenších firiem po najväčšie
+            orderBy: { min_emp: 'asc' }
         });
     } catch (error) {
         console.error("Database query failed:", error);

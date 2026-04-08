@@ -103,6 +103,10 @@ class Organization(Base):
 
     hq_address: Mapped[str | None] = mapped_column(sa.Text)
 
+    lat: Mapped[float | None] = mapped_column(sa.Float)
+
+    lon: Mapped[float | None] = mapped_column(sa.Float)
+
     size_category: Mapped[str | None] = mapped_column(sa.String(50))
 
     size_category_id: Mapped[uuid.UUID | None] = mapped_column(

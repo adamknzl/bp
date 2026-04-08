@@ -1,6 +1,20 @@
 import { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 
+import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
+import L from 'leaflet';
+
+import icon from 'leaflet/dist/images/marker-icon.png';
+import iconShadow from 'leaflet/dist/images/marker-shadow.png';
+
+let DefaultIcon = L.icon({
+    iconUrl: icon,
+    shadowUrl: iconShadow,
+    iconSize: [25, 41],
+    iconAnchor: [12, 41]
+});
+L.Marker.prototype.options.icon = DefaultIcon;
+
 interface Category {
   category_id: string;
   name: string;
@@ -16,11 +30,21 @@ interface Branch {
   lon: number | null;
 }
 
-// Nový interface pre detské organizácie (z relácie parent_id)
 interface ChildOrganization {
   organization_id: string;
   name: string;
   hq_address: string | null;
+  lat: number | null;
+  lon: number | null;
+}
+
+interface MapLocation {
+  id: string;
+  title: string;
+  address: string;
+  isHQ: boolean;
+  lat?: number | null;
+  lon?: number | null;
 }
 
 interface OrganizationDetail {
@@ -33,6 +57,8 @@ interface OrganizationDetail {
   emails: string[];
   tel_numbers: string[];
   hq_address: string | null;
+  lat: number | null;
+  lon: number | null;
   organization_category?: {
     category: Category
   }[];
@@ -63,6 +89,19 @@ const getCategoryColor = (categoryName: string) => {
 
   return colors[categoryName] || colors['Other'];
 };
+
+function FitBounds({ markers }: { markers: MapLocation[] }) {
+  const map = useMap();
+
+  useEffect(() => {
+    if (markers.length > 0) {
+      const bounds = L.latLngBounds(markers.map(m => [m.lon!, m.lat!]));
+      map.fitBounds(bounds, { padding: [50, 50], maxZoom: 13 });
+    }
+  }, [markers, map]);
+
+  return null;
+}
 
 export default function OrganizationDetail() {
   const { id } = useParams<{ id: string }>(); 
@@ -95,46 +134,40 @@ export default function OrganizationDetail() {
   if (error) return <div className="p-12 text-center text-red-500 font-bold">{error}</div>;
   if (!org) return null;
 
-  // --- LOGIKA PRE POBOČKY A CENTRÁLU ---
-  // Skontrolujeme, či organizácia má aspoň jedného "potomka" (z OSM alebo z CSV)
-  const hasBranches = (org.branches && org.branches.length > 0) || (org.other_organization && org.other_organization.length > 0);
-  
-  // Tu si zozbierame všetky lokality do jedného poľa, aby sme ich mohli jednoducho vykresliť
-  const locations = [];
+  console.log("Branches from DB:", org.branches);
 
-  if (hasBranches) {
-    // 1. Ako prvú vždy pridáme centrálu (HQ) pre túto organizáciu
+  const hasBranches = (org.branches && org.branches.length > 0) || (org.other_organization && org.other_organization.length > 0);
+  const hasMapData = hasBranches || (org.lat != null && org.lon != null);
+  
+  const locations: MapLocation[] = [];
+
+  if (hasMapData) {
     locations.push({
       id: org.organization_id,
       title: "Centrála organizácie",
       address: org.hq_address || "Adresa centrály neuvedená",
-      isHQ: true
+      isHQ: true,
+      lat: org.lat,
+      lon: org.lon
     });
 
-    // 2. Pridáme detské organizácie (tvoja štruktúra z CSV Python importu)
     if (org.other_organization) {
       org.other_organization.forEach(child => {
-        locations.push({
-          id: child.organization_id,
-          title: child.name,
-          address: child.hq_address || "Adresa neuvedená",
-          isHQ: false
-        });
-      });
-    }
-
-    // 3. Pridáme pobočky z OpenStreetMap (tabuľka branch)
-    if (org.branches) {
-      org.branches.forEach(b => {
-        locations.push({
-          id: b.branch_id,
-          title: b.city || "Pobočka",
-          address: b.street || "Adresa neuvedená",
-          isHQ: false
-        });
+        if(child.organization_id !== org.organization_id) {
+          locations.push({
+            id: child.organization_id,
+            title: child.name,
+            address: child.hq_address || "Adresa neuvedená",
+            isHQ: false,
+            lat: child.lat,
+            lon: child.lon
+          });
+        }
       });
     }
   }
+
+  const mapMarkers = locations.filter(l => l.lat != null && l.lon != null);
 
   return (
     <div className="min-h-screen bg-[#F8F9FA] pb-20">
@@ -187,14 +220,41 @@ export default function OrganizationDetail() {
             <section>
               <h2 className="text-2xl font-bold text-[#005A92] font-['Manrope',sans-serif] mb-6">Branches</h2>
               
-              {/* Map Placeholder */}
-              <div className="w-full h-64 bg-gray-200 rounded-xl mb-6 flex items-center justify-center text-gray-400 border border-gray-300 border-dashed">
-                [ Map Placeholder - Integration with Maps ]
+              {/* Map */}
+              <div className="w-full h-80 bg-gray-200 rounded-xl mb-6 overflow-hidden shadow-sm border border-gray-100 z-0">
+                {mapMarkers.length > 0 ? (
+                  <MapContainer 
+                    center={[mapMarkers[0].lon!, mapMarkers[0].lat!]} 
+                    zoom={12} 
+                    scrollWheelZoom={false} 
+                    style={{ height: '100%', width: '100%' }}
+                  >
+                    <TileLayer
+                      attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+                      url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                    />
+                    
+                    <FitBounds markers={mapMarkers} />
+
+                    {mapMarkers.map((loc) => (
+                      <Marker key={loc.id} position={[loc.lon!, loc.lat!]}>
+                        <Popup>
+                          <strong>{loc.title}</strong><br/>
+                          {loc.address}
+                        </Popup>
+                      </Marker>
+                    ))}
+                  </MapContainer>
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center text-gray-500 bg-gray-50">
+                    Pre túto organizáciu zatiaľ nemáme presné GPS súradnice.
+                  </div>
+                )}
               </div>
 
               {/* Branch List */}
               <div className="space-y-4">
-                {hasBranches ? (
+                {locations.length > 0 ? (
                   locations.map((loc) => (
                     <div key={loc.id} className="bg-white p-5 rounded-xl flex items-center gap-5 shadow-sm border border-gray-100">
                       <div className={`w-12 h-12 rounded-lg flex items-center justify-center flex-shrink-0 ${loc.isHQ ? 'bg-[#005A92] text-white' : 'bg-[#E2F5EA] text-[#2D6A4F]'}`}>

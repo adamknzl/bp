@@ -131,12 +131,15 @@ def process_insert_org(row, source_id, session, parent_id=None):
         "name": row.get('name'),
         "ico": ico_val,
         "legal_form": row.get('legal_form'),
+        "hq_address": row.get('address'),
         "emails": get_emails(contact_page_html),
         "tel_numbers": get_tel_numbers(contact_page_html),
         "web_url": branch_url,
         "created_at": datetime.now(),
         "size_category_id": size_category_id,
-        "description": description
+        "description": description,
+        "lat": row.get('X').replace(",", "."),
+        "lon": row.get('Y').replace(",", ".")
     }
 
     log_url(row.get('name'), org_data["web_url"])
@@ -150,12 +153,15 @@ def process_insert_org(row, source_id, session, parent_id=None):
                 'parent_id': insert_stmt.excluded.parent_id,
                 'name': insert_stmt.excluded.name,
                 'legal_form': insert_stmt.excluded.legal_form,
+                'hq_address': insert_stmt.excluded.hq_address,
                 'emails': insert_stmt.excluded.emails,
                 'tel_numbers': insert_stmt.excluded.tel_numbers,
                 'size_category_id': insert_stmt.excluded.size_category_id,
                 'web_url': insert_stmt.excluded.web_url,
                 'source_id': insert_stmt.excluded.source_id,
-                'description': insert_stmt.excluded.description
+                'description': insert_stmt.excluded.description,
+                'lat': insert_stmt.excluded.lat,
+                'lon': insert_stmt.excluded.lon
             }
         ).returning(Organization.organization_id)
 

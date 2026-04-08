@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
+import { useSearchParams } from 'react-router-dom';
 
 interface Category {
   category_id: string;
@@ -16,6 +17,8 @@ interface Organization {
   name: string;
   ico: string;
   legal_form: string | null;
+  hq_address: string | null;
+  description: string | null;
   organization_category?: {
     category: Category
   }[];
@@ -44,6 +47,9 @@ const getCategoryColor = (categoryName: string) => {
 };
 
 export default function OrganizationList() {
+  const [searchParams] = useSearchParams();
+  const searchQuery = searchParams.get('search');
+
   const [organizations, setOrganizations] = useState<Organization[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [sizes, setSizes] = useState<SizeCategory[]>([]);
@@ -63,8 +69,15 @@ export default function OrganizationList() {
 
   useEffect(() => {
     const fetchData = async () => {
+      setLoading(true);
       try {
         const params = new URLSearchParams();
+        params.append('limit', '50');
+
+        if (searchQuery) {
+          params.append('search', searchQuery);
+        }
+
         const savedSize = sessionStorage.getItem('org_filter_size') || "";
         const savedCats = sessionStorage.getItem('org_filter_categories');
         const parsedCats = savedCats ? JSON.parse(savedCats) : [];
@@ -98,7 +111,7 @@ export default function OrganizationList() {
     };
 
     fetchData();
-  }, []);
+  }, [searchQuery]);
 
   const toggleCategory = (categoryId: string) => {
     setSelectedCategories(prev => 
@@ -116,7 +129,11 @@ export default function OrganizationList() {
       sessionStorage.setItem('org_filter_categories', JSON.stringify(selectedCategories));
 
       const params = new URLSearchParams();
+      params.append('limit', '50');
       
+      if (searchQuery) {
+        params.append('search', searchQuery);
+      }
       if (selectedSize) {
         params.append('size', selectedSize);
       }
@@ -136,7 +153,6 @@ export default function OrganizationList() {
     }
   };
 
-  // Nová funkcia na zrušenie všetkých filtrov
   const handleClearFilters = async () => {
     setSelectedSize("");
     setSelectedCategories([]);
@@ -146,7 +162,14 @@ export default function OrganizationList() {
     setLoading(true);
     setError(null);
     try {
-      const response = await fetch('http://localhost:3000/api/organizations');
+      const params = new URLSearchParams();
+      params.append('limit', '50');
+      
+      if (searchQuery) {
+        params.append('search', searchQuery);
+      }
+
+      const response = await fetch(`http://localhost:3000/api/organizations?${params.toString()}`);
       if (!response.ok) throw new Error("Chyba pri obnove dát");
       
       const result = await response.json();
@@ -165,7 +188,9 @@ export default function OrganizationList() {
 
   return (
     <div className="max-w-[1400px] mx-auto p-8">
-      <h1 className="text-4xl font-extrabold text-[#005A92] mb-8 font-['Manrope',sans-serif]">Non-profits overview</h1>
+      <h1 className="text-4xl font-extrabold text-[#005A92] mb-8 font-['Manrope',sans-serif]">
+        {searchQuery ? `Výsledky hľadania pre: "${searchQuery}"` : 'Non-profits overview'}
+      </h1>
       
       <div className="flex flex-col lg:flex-row gap-8">
         
@@ -287,9 +312,23 @@ export default function OrganizationList() {
                      })}
                   </div>
                   <h3 className="text-xl font-bold text-[#005A92] mb-3 font-['Manrope',sans-serif] leading-tight">{org.name}</h3>
-                  <p className="text-gray-500 text-sm mb-6 flex-grow leading-relaxed">
-                    Informácie o poslaní tejto organizácie momentálne dopĺňame z našej databázy.
-                  </p>
+                  <div className="mb-6 flex-grow flex flex-col">
+                    <p className="text-gray-500 text-sm leading-relaxed line-clamp-3">
+                      {org.description}
+                    </p>
+
+                    {org.hq_address && (
+                      <div className="flex items-center gap-1.5 mt-auto pt-4 text-gray-400">
+                        <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path>
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                        </svg>
+                        <span className="text-sm text-gray-500">
+                          {org.hq_address.split(',')[0]}
+                        </span>
+                      </div>
+                    )}
+                  </div>
                   <Link 
                     to={`/org/${org.organization_id}`}
                     className="w-full py-2.5 bg-[#E9F1FF] text-[#00426D] text-center font-bold rounded hover:text-white hover:bg-[#00426D] transition text-sm"

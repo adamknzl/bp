@@ -37,6 +37,14 @@ export const getAllOrganizations = async (req: Request, res: Response): Promise<
             };
         }
 
+        if (req.query.search) {
+            const searchTerm = req.query.search as string;
+            filters.OR = [
+                { name: { contains: searchTerm, mode: 'insensitive' } },
+                { hq_address: { contains: searchTerm, mode: 'insensitive' } }
+            ];
+        }
+
         const orgs = await OrgService.getOrganizations(limit, filters);
 
         res.status(200).json({

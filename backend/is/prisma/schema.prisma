@@ -53,6 +53,8 @@ model organization {
   web_url            String?
   created_at         DateTime       @db.Timestamp(6)
   hq_address         String?
+  lat                Float?
+  lon                Float?
   size_category      String?        @db.VarChar(50)
   size_category_id   String?        @db.Uuid
   description        String?
