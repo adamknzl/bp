@@ -83,11 +83,29 @@ def process_insert_org(row, source_id, session, parent_id=None):
     if size_raw:
         size_cat = format_size_category(size_raw)
 
-        select_stmt = select(SizeCategory.cat_id).where(
-            SizeCategory.min_emp == size_cat["min_emp"],
-            SizeCategory.max_emp == size_cat["max_emp"]
-        )
-        size_category_id = session.execute(select_stmt).scalar()
+        if size_cat["min_emp"] is not None:
+            if size_cat["max_emp"] is None:
+                select_stmt = select(SizeCategory.cat_id).where(
+                    SizeCategory.min_emp == size_cat["min_emp"],
+                    SizeCategory.max_emp.is_(None)
+                )
+            else:
+                select_stmt = select(SizeCategory.cat_id).where(
+                    SizeCategory.min_emp == size_cat["min_emp"],
+                    SizeCategory.max_emp == size_cat["max_emp"]
+                )
+
+            size_category_id = session.execute(select_stmt).scalar()
+
+            if not size_category_id:
+                new_size_cat = SizeCategory(
+                    label=size_cat["label"],
+                    min_emp=size_cat["min_emp"],
+                    max_emp=size_cat["max_emp"]
+                )
+                session.add(new_size_cat)
+                session.flush()
+                size_category_id = new_size_cat.cat_id
 
     with measure_time('URL search'):
         branch_url = get_url(row.get('name'))
@@ -138,8 +156,8 @@ def process_insert_org(row, source_id, session, parent_id=None):
         "created_at": datetime.now(),
         "size_category_id": size_category_id,
         "description": description,
-        "lat": row.get('X').replace(",", "."),
-        "lon": row.get('Y').replace(",", ".")
+        "lon": row.get('X').replace(",", "."),
+        "lat": row.get('Y').replace(",", ".")
     }
 
     log_url(row.get('name'), org_data["web_url"])
