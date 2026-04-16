@@ -3,6 +3,7 @@ from datetime import datetime
 import time
 import requests
 import os
+import random
 import pandas as pd
 from collections import defaultdict
 from contextlib import contextmanager
@@ -311,7 +312,9 @@ def init_pipeline(npo_data, args):
 
         if args.limit:
             print(f"Limiting execution to {args.limit} records.")
-            records = records[:args.limit]
+            
+            final_limit = min(args.limit, len(records))
+            records = random.sample(records, final_limit)
 
         for row in records:
             if row.get('FORMA') != 736: # Pobocny spolek
