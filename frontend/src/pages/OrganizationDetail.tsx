@@ -152,7 +152,9 @@ export default function OrganizationDetail() {
           <h1 className="text-4xl font-extrabold text-[#005A92] font-['Manrope',sans-serif] mb-2">
             {org.name}
           </h1>
-          <h3 className="text-md text-gray-700 mb-4">{org.legal_form}</h3>
+          <h3 className="text-md text-gray-700 mb-4">
+            {org.legal_form_rel?.name}
+          </h3>
           <div className="flex gap-2 flex-wrap">
             {org.organization_category?.map(({ category }) => (
               <span
