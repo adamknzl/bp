@@ -11,7 +11,7 @@ export const getAllOrganizations = async (req: Request, res: Response): Promise<
         }
 
         if (req.query.legal_form) {
-            filters.legal_form = req.query.legal_form as string;
+            filters.legal_form_code = req.query.legal_form as string;
         }
 
         if (req.query.name) {
@@ -22,7 +22,7 @@ export const getAllOrganizations = async (req: Request, res: Response): Promise<
         }
 
         if (req.query.size) {
-            filters.size_category_id = req.query.size as string;
+            filters.size_category_code = req.query.size as string;
         }
 
         if (req.query.categories) {
@@ -117,12 +117,14 @@ export const getFiltersMetadata = async (req: Request, res: Response): Promise<v
     try {
         const categories = await OrgService.getCategories();
         const sizes = await OrgService.getSizeCategories();
+        const legalForms = await OrgService.getLegalForms();
 
         res.status(200).json({
             success: true,
             data: {
                 categories,
-                sizes
+                sizes,
+                legalForms
             }
         });
     } catch (error) {

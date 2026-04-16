@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { API_BASE_URL } from '../config/api';
-import type { Category, Organization, SizeCategory } from '../types/organization';
+import type { Category, Organization, SizeCategory, LegalForm } from '../types/organization';
 
 // ─── Session storage keys ────────────────────────────────────────────────────
 
@@ -11,14 +11,6 @@ const SESSION_KEYS = {
 } as const;
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
-
-const FALLBACK_LEGAL_FORMS = [
-  'Spolek',
-  'Ústav',
-  'Nadace',
-  'Nadační fond',
-  'Obecně prospěšná společnost',
-];
 
 function readSessionCategories(): string[] {
   try {
@@ -50,7 +42,7 @@ export function useOrganizations(searchQuery: string | null) {
   const [organizations, setOrganizations] = useState<Organization[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [sizes, setSizes] = useState<SizeCategory[]>([]);
-  const [legalForms, setLegalForms] = useState<string[]>([]);
+  const [legalForms, setLegalForms] = useState<LegalForm[]>([]); // Zmena typu na LegalForm[]
 
   // Filter state — initialised from sessionStorage so selections survive navigation
   const [selectedSize, setSelectedSize] = useState<string>(
@@ -78,7 +70,6 @@ export function useOrganizations(searchQuery: string | null) {
       try {
         const params = buildParams({
           searchQuery,
-          // Read persisted filters directly — state may not yet reflect sessionStorage
           size: sessionStorage.getItem(SESSION_KEYS.size) ?? '',
           legalForm: sessionStorage.getItem(SESSION_KEYS.legalForm) ?? '',
           categories: readSessionCategories(),
@@ -99,7 +90,7 @@ export function useOrganizations(searchQuery: string | null) {
         setOrganizations(orgsResult.data);
         setCategories(filtersResult.data.categories);
         setSizes(filtersResult.data.sizes);
-        setLegalForms(filtersResult.data.legalForms ?? FALLBACK_LEGAL_FORMS);
+        setLegalForms(filtersResult.data.legalForms);
       } catch (err) {
         if (err instanceof Error && err.name !== 'AbortError') {
           setError('Unable to load data.');

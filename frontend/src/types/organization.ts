@@ -3,11 +3,6 @@ export interface Category {
   name: string;
 }
 
-export interface SizeCategory {
-  cat_id: string;
-  label: string;
-}
-
 export interface Branch {
   branch_id: string;
   city: string | null;
@@ -26,14 +21,29 @@ export interface ChildOrganization {
   lon: number | null;
 }
 
+export interface LegalForm {
+  code: string;
+  name: string;
+}
+
+export interface SizeCategory {
+  code: string;
+  label: string;
+  min_emp: number | null;
+  max_emp: number | null;
+}
+
 export interface Organization {
   organization_id: string;
   name: string;
   ico: string;
-  legal_form: string | null;
+  legal_form_code: string | null;
+  size_category_code: string | null;
   hq_address: string | null;
   description: string | null;
   organization_category?: { category: Category }[];
+  legal_form_rel?: LegalForm | null;
+  size_category_rel?: SizeCategory | null;
 }
 
 export interface OrganizationDetail extends Organization {

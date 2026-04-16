@@ -61,7 +61,7 @@ export default function OrganizationList() {
               )}
             </div>
 
-            {/* Legal form */}
+            {/* Legal form filter */}
             <div className="mb-6">
               <label className="block text-xs font-bold text-gray-500 mb-2 uppercase tracking-wider">
                 Legal Form
@@ -73,14 +73,14 @@ export default function OrganizationList() {
               >
                 <option value="">All legal forms</option>
                 {legalForms.map(form => (
-                  <option key={form} value={form}>
-                    {form}
+                  <option key={form.code} value={form.code}>
+                    {form.name}
                   </option>
                 ))}
               </select>
             </div>
 
-            {/* Size category */}
+            {/* Size Category filter */}
             <div className="mb-6">
               <label className="block text-xs font-bold text-gray-500 mb-2 uppercase tracking-wider">
                 Size Category
@@ -92,7 +92,7 @@ export default function OrganizationList() {
               >
                 <option value="">All sizes</option>
                 {sizes.map(size => (
-                  <option key={size.cat_id} value={size.cat_id}>
+                  <option key={size.code} value={size.code}>
                     {size.label}
                   </option>
                 ))}
@@ -209,7 +209,10 @@ export default function OrganizationList() {
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
                         </svg>
                         <span className="text-sm text-gray-500">
-                          {org.hq_address.split(',')[0]}
+                          {org.hq_address?.includes(',') 
+                            ? org.hq_address.split(',').pop()?.trim().replace(/^\d{3}\s?\d{2}\s+/, '')
+                            : org.hq_address
+                          }
                         </span>
                       </div>
                     )}

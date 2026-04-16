@@ -11,6 +11,17 @@ const adapter = new PrismaPg(pool);
 
 const prisma = new PrismaClient({ adapter });
 
+export const getLegalForms = async () => {
+    try {
+        return await prisma.legal_form.findMany({
+            orderBy: { name: 'asc' }
+        });
+    } catch (error) {
+        console.error("Database query failed:", error);
+        throw new Error("Failed to fetch legal forms");
+    }
+};
+
 export const getOrganizations = async (limit: number = 50, filters: any = {}) => {
     try {
         const organizations = await prisma.organization.findMany({
@@ -19,7 +30,9 @@ export const getOrganizations = async (limit: number = 50, filters: any = {}) =>
                     include: {
                         category: true
                     }
-                }
+                },
+                legal_form_rel: true,
+                size_category_rel: true
             },
             where: filters,
             take: limit,
@@ -43,7 +56,9 @@ export const getOrganizationById = async (id: string) => {
                     include: { category: true }
                 },
                 branches: true,
-                other_organization: true
+                other_organization: true,
+                legal_form_rel: true,
+                size_category_rel: true
             }
         });
         return organization;
