@@ -142,6 +142,9 @@ def process_insert_org(row, source_id, session, parent_id=None):
     katpo_raw = row.get('KATPO') 
     size_cat_code = str(int(float(katpo_raw))).zfill(3) if pd.notna(katpo_raw) and katpo_raw != "" else None
 
+    if "v likvidaci" in row.get('FIRMA'):
+        return None
+
     with measure_time('URL search'):
         branch_url = session.execute(select(Organization.web_url).where(ico_val == Organization.ico)).scalar()
         if branch_url is not None:
@@ -165,6 +168,9 @@ def process_insert_org(row, source_id, session, parent_id=None):
 
             description = gen_res.get('description')
             categories = gen_res.get('categories', [])
+
+            if len(categories) == 0:
+                return None
     else:
         print(f"Organization {row.get('FIRMA')} already has a description, skipping generating...")
         description = session.execute(select(Organization.description).where(Organization.ico == ico_val)).scalar()
