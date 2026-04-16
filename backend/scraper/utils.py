@@ -2,9 +2,13 @@ import requests
 import re
 import csv
 import os
+import time
 from bs4 import BeautifulSoup
 from trafilatura import fetch_url, extract
 from urllib.parse import urljoin
+from geopy.geocoders import Nominatim
+
+from categories import size_category
 
 def log_url(name: str, best_url: str, filename="fetched_urls.csv"):
     file_exists = os.path.isfile(filename)
@@ -32,19 +36,79 @@ def clean_npo_name(name):
     clean = re.sub(r'\s*[,]\s*', ' ', clean)
     return " ".join(clean.split()).strip()
 
-def format_size_category(raw: str) -> dict:
+def get_gps(address):
+    geolocator = Nominatim(user_agent="npo_project")
+    location = geolocator.geocode(address)
+    
+    time.sleep(1)
+
+    return location
+
+
+def format_address(row):
+    def safe_get(key):
+        val = row.get(key)
+        val_str = str(val).strip()
+        
+        if not val or val_str.lower() in ['nan', 'none']:
+            return ""
+            
+        if val_str.endswith(".0"):
+            val_str = val_str[:-2]
+            
+        return val_str
+
+    psc = safe_get('PSC')
+    city = safe_get('OBEC_TEXT')
+    city_district = safe_get('COBCE_TEXT')
+    street = safe_get('ULICE_TEXT')
+    cdom = safe_get('CDOM')
+    cor = safe_get('COR')
+
+    if cdom and cor:
+        house_number = f"{cdom}/{cor}"
+    elif cdom:
+        house_number = cdom
+    else:
+        house_number = ""
+
+    if street:
+        street_part = f"{street} {house_number}".strip()
+    elif city_district:
+        street_part = f"{city_district} {house_number}".strip()
+    else:
+        street_part = house_number
+
+    city_part = f"{psc} {city}".strip()
+
+    full_address = f"{street_part}, {city_part}".strip(', ')
+    
+    return full_address
+
+def format_size_category(category_code: str) -> dict:
     """
-    Formats the size category description from original format to a dictionary
+    Formats the size category description from the official code to a dictionary
     consisting of a label, minimum and maximum number of employees.
     """
-    if not raw or "Neuvedeno" in raw:
+    raw = size_category.get(str(category_code))
+
+    if not raw or raw == "Neuvedeno":
         return {
             "label": "Unknown",
             "min_emp": None,
             "max_emp": None
         }
 
-    numbers = [int(s) for s in re.findall(r'\d+', raw)]
+    if raw == "Bez zaměstnanců":
+        return {
+            "label": "0 employees",
+            "min_emp": 0,
+            "max_emp": 0
+        }
+
+    raw_cleaned = raw.replace(" ", "")
+
+    numbers = [int(s) for s in re.findall(r'\d+', raw_cleaned)]
 
     if len(numbers) >= 2:
         min_emp = numbers[0]
@@ -118,26 +182,3 @@ def get_web_content(url: str) -> str:
     Extracts and returns the content of a webpage located at 'url' using trafilatura library.
     """
     return extract(fetch_url(url))
-
-if __name__ == "__main__":
-    url = "https://bratri-capkove.cz/"
-    res = fetch_contact_page(url)
-
-    print(f"URL of contact page for {url} is: {res}")
-
-    target_url = res if res else url
-    
-    r = requests.get(target_url)
-    
-    raw_text_for_contacts = get_html(r.text)
-
-    emails = get_emails(raw_text_for_contacts)
-    tel_numbers = get_tel_numbers(raw_text_for_contacts)
-
-    print("Emails:")
-    for email in emails:
-        print(email)
-
-    print("Telephone numbers:")
-    for tel_number in tel_numbers:
-        print(tel_number)

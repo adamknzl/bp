@@ -95,7 +95,11 @@ class Organization(Base):
 
     ico: Mapped[str | None] = mapped_column(sa.String(20), nullable=False, unique=True)
 
-    legal_form: Mapped[str | None] = mapped_column(sa.String(100))
+    legal_form_code: Mapped[str | None] = mapped_column(
+        sa.String(10), 
+        sa.ForeignKey("legal_form.code"), 
+        nullable=True
+    )
 
     web_url: Mapped[str | None] = mapped_column(sa.Text)
 
@@ -107,11 +111,9 @@ class Organization(Base):
 
     lon: Mapped[float | None] = mapped_column(sa.Float)
 
-    size_category: Mapped[str | None] = mapped_column(sa.String(50))
-
-    size_category_id: Mapped[uuid.UUID | None] = mapped_column(
-        UUID(as_uuid=True),
-        sa.ForeignKey("size_category.cat_id"),
+    size_category_code: Mapped[str | None] = mapped_column(
+        sa.String(10), 
+        sa.ForeignKey("size_category.code"), 
         nullable=True
     )
 
@@ -121,16 +123,25 @@ class Organization(Base):
 
     description: Mapped[str | None] = mapped_column(sa.Text)
 
+class LegalForm(Base):
+    __tablename__ = "legal_form"
+
+    code: Mapped[str] = mapped_column(
+        sa.String(10),
+        primary_key=True
+    )
+
+    name: Mapped[str] = mapped_column(sa.String(255))
+
 class SizeCategory(Base):
     __tablename__ = "size_category"
 
-    cat_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True),
-        primary_key=True,
-        server_default=sa.text("gen_random_uuid()")
+    code: Mapped[str] = mapped_column(
+        sa.String(10),
+        primary_key=True
     )
 
-    label: Mapped[str] = mapped_column(sa.String(50))
+    label: Mapped[str] = mapped_column(sa.String(255))
 
     min_emp: Mapped[int] = mapped_column(sa.Integer)
 

@@ -7,9 +7,9 @@ from openai import OpenAI
 
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
-def generate(npo_name, legal_form, url):
+def generate(npo_name, url):
     prompt = f"""
-    You are analyzing a Czech non-profit organization strictly based on information provided - name, legal form and content from the organization's landing web page.
+    You are analyzing a Czech non-profit organization strictly based on information provided - name and content from the organization's landing web page.
 
     Task:
     1) Assign 1-4 most relevant categories from the predefined list.
@@ -41,7 +41,6 @@ def generate(npo_name, legal_form, url):
 
     NGO data:
     Name: {npo_name}
-    Legal form: {legal_form}
     Web content:
     {get_web_content(url)}
     """

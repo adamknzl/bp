@@ -6,6 +6,22 @@ datasource db {
   provider = "postgresql"
 }
 
+model legal_form {
+  code         String         @id @db.VarChar(10) // napr. "706"
+  name         String         @db.VarChar(150)    // napr. "Spolek"
+  
+  organization organization[]
+}
+
+model size_category {
+  code         String         @id @db.VarChar(10) // napr. "120"
+  label        String         @db.VarChar(50)     // napr. "1 - 5 zaměstnanců"
+  min_emp      Int?
+  max_emp      Int?
+  
+  organization organization[]
+}
+
 model branch {
   branch_id       String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   organization_id String? @db.Uuid
@@ -49,20 +65,23 @@ model organization {
   parent_id          String?        @db.Uuid
   name               String         @db.VarChar(200)
   ico                String         @unique @db.VarChar(20)
-  legal_form         String?        @db.VarChar(100)
   web_url            String?
   created_at         DateTime       @db.Timestamp(6)
   hq_address         String?
   lat                Float?
   lon                Float?
-  size_category      String?        @db.VarChar(50)
-  size_category_id   String?        @db.Uuid
   description        String?
   emails             String[]       @db.VarChar(120)
   tel_numbers        String[]       @db.VarChar(30)
+
+  legal_form_code    String?        @db.VarChar(10)
+  size_category_code String?        @db.VarChar(10)
+
+  legal_form_rel     legal_form?    @relation(fields: [legal_form_code], references: [code], onDelete: NoAction, onUpdate: NoAction)
+  size_category_rel  size_category? @relation(fields: [size_category_code], references: [code], onDelete: NoAction, onUpdate: NoAction)
+
   organization       organization?  @relation("organizationToorganization", fields: [parent_id], references: [organization_id], onDelete: NoAction, onUpdate: NoAction)
   other_organization organization[] @relation("organizationToorganization")
-  size_category_rel  size_category? @relation(fields: [size_category_id], references: [cat_id], onDelete: NoAction, onUpdate: NoAction)
   data_source        data_source?   @relation(fields: [source_id], references: [source_id], onDelete: NoAction, onUpdate: NoAction)
 
   organization_category organization_category[]
@@ -83,14 +102,6 @@ model role {
   role_id     String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   name        String  @db.VarChar(50)
   description String?
-}
-
-model size_category {
-  cat_id       String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  label        String         @db.VarChar(50)
-  min_emp      Int
-  max_emp      Int?
-  organization organization[]
 }
 
 model user {
