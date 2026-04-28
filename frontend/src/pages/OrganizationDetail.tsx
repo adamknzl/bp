@@ -57,7 +57,7 @@ function ContactList({
   onToggle,
   expandLabel,
   collapseLabel,
-  emptyLabel = 'Neuvedené',
+  emptyLabel = 'Neuvedeno',
 }: ContactListProps) {
   if (!items || items.length === 0) {
     return <span className="text-gray-500 font-normal italic">{emptyLabel}</span>;
@@ -94,7 +94,7 @@ export default function OrganizationDetail() {
   const [showAllPhones, setShowAllPhones] = useState(false);
 
   if (loading) {
-    return <div className="p-12 text-center text-gray-500 font-medium">Načítavam detail...</div>;
+    return <div className="p-12 text-center text-gray-500 font-medium">Načítám detail...</div>;
   }
   if (error) {
     return <div className="p-12 text-center text-red-500 font-bold">{error}</div>;
@@ -111,8 +111,8 @@ export default function OrganizationDetail() {
   if (hasGeoData || hasChildren) {
     locations.push({
       id: org.organization_id,
-      title: 'Centrála organizácie',
-      address: org.hq_address ?? 'Adresa centrály neuvedená',
+      title: 'Centrála organizace',
+      address: org.hq_address ?? 'Adresa centrály neuvedena',
       isHQ: true,
       lat: org.lat,
       lon: org.lon,
@@ -123,7 +123,7 @@ export default function OrganizationDetail() {
         locations.push({
           id: child.organization_id,
           title: child.name,
-          address: child.hq_address ?? 'Adresa neuvedená',
+          address: child.hq_address ?? 'Adresa neuvedena',
           isHQ: false,
           lat: child.lat,
           lon: child.lon,
@@ -132,7 +132,6 @@ export default function OrganizationDetail() {
     });
   }
 
-  // Only markers that have valid coordinates
   const mapMarkers = locations.filter(l => l.lat != null && l.lon != null);
 
   return (
@@ -144,7 +143,7 @@ export default function OrganizationDetail() {
           to="/"
           className="text-gray-500 hover:text-[#005A92] transition text-sm flex items-center gap-2 mb-6"
         >
-          <span>&larr;</span> back to search results
+          <span>&larr;</span> zpět na výsledky hledání
         </Link>
 
         {/* Header */}
@@ -175,14 +174,14 @@ export default function OrganizationDetail() {
 
             <section>
               <h2 className="text-2xl font-bold text-[#005A92] font-['Manrope',sans-serif] mb-4">
-                Description
+                Popis
               </h2>
               <div className="text-gray-700 leading-relaxed text-base">
                 {org.description ? (
                   <p>{org.description}</p>
                 ) : (
                   <p className="italic opacity-60">
-                    Organizácia zatiaľ neposkytla bližší popis svojej činnosti.
+                    Organizace zatím neposkytla bližší popis své činnosti.
                   </p>
                 )}
               </div>
@@ -190,14 +189,13 @@ export default function OrganizationDetail() {
 
             <section>
               <h2 className="text-2xl font-bold text-[#005A92] font-['Manrope',sans-serif] mb-6">
-                Branches
+                Pobočky
               </h2>
 
               {/* Map */}
               <div className="w-full h-80 bg-gray-200 rounded-xl mb-6 overflow-hidden shadow-sm border border-gray-100 z-0">
                 {mapMarkers.length > 0 ? (
                   <MapContainer
-                    // Fixed: Leaflet expects [lat, lon], not [lon, lat]
                     center={[mapMarkers[0].lat!, mapMarkers[0].lon!]}
                     zoom={12}
                     scrollWheelZoom={false}
@@ -220,7 +218,7 @@ export default function OrganizationDetail() {
                   </MapContainer>
                 ) : (
                   <div className="w-full h-full flex items-center justify-center text-gray-500 bg-gray-50">
-                    Pre túto organizáciu zatiaľ nemáme presné GPS súradnice.
+                    Pro tuto organizaci zatím nemáme přesné GPS souřadnice.
                   </div>
                 )}
               </div>
@@ -258,7 +256,7 @@ export default function OrganizationDetail() {
                   ))
                 ) : (
                   <p className="text-gray-500 italic p-4 bg-gray-50 rounded-lg">
-                    Táto organizácia zatiaľ nemá evidované žiadne ďalšie pobočky.
+                    Tato organizace zatím nemá evidované žádné další pobočky.
                   </p>
                 )}
               </div>
@@ -269,7 +267,7 @@ export default function OrganizationDetail() {
           <div className="lg:col-span-1">
             <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-8 sticky top-24">
               <h3 className="text-2xl font-bold text-[#005A92] font-['Manrope',sans-serif] border-b border-gray-100 pb-4 mb-6">
-                Contact info
+                Kontaktní údaje
               </h3>
 
               <div className="space-y-8">
@@ -280,7 +278,7 @@ export default function OrganizationDetail() {
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
                     </svg>
-                    E-mail addresses
+                    E-mailové adresy
                   </div>
                   <div className="space-y-2 ml-6 text-sm font-medium text-[#005A92]">
                     <ContactList
@@ -288,8 +286,8 @@ export default function OrganizationDetail() {
                       href={email => `mailto:${email}`}
                       showAll={showAllEmails}
                       onToggle={() => setShowAllEmails(v => !v)}
-                      expandLabel={n => `+ Ďalšie e-maily (${n})`}
-                      collapseLabel="- Zobraziť menej"
+                      expandLabel={n => `+ Další e-maily (${n})`}
+                      collapseLabel="- Zobrazit méně"
                     />
                   </div>
                 </div>
@@ -300,7 +298,7 @@ export default function OrganizationDetail() {
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
                     </svg>
-                    Telephone contacts
+                    Telefonní kontakty
                   </div>
                   <div className="space-y-2 ml-6 text-sm font-medium text-gray-800">
                     <ContactList
@@ -308,8 +306,8 @@ export default function OrganizationDetail() {
                       href={phone => `tel:${phone}`}
                       showAll={showAllPhones}
                       onToggle={() => setShowAllPhones(v => !v)}
-                      expandLabel={n => `+ Ďalšie čísla (${n})`}
-                      collapseLabel="- Zobraziť menej"
+                      expandLabel={n => `+ Další čísla (${n})`}
+                      collapseLabel="- Zobrazit méně"
                     />
                   </div>
                 </div>
@@ -320,7 +318,7 @@ export default function OrganizationDetail() {
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9" />
                     </svg>
-                    Website
+                    Webové stránky
                   </div>
                   <div className="space-y-2 ml-6 text-sm font-medium text-[#005A92]">
                     {org.web_url ? (
@@ -333,7 +331,7 @@ export default function OrganizationDetail() {
                         {org.web_url.replace(/^https?:\/\//, '')}
                       </a>
                     ) : (
-                      <span className="text-gray-500 font-normal italic">Neuvedené</span>
+                      <span className="text-gray-500 font-normal italic">Neuvedeno</span>
                     )}
                   </div>
                 </div>

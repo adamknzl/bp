@@ -134,3 +134,32 @@ export const getFiltersMetadata = async (req: Request, res: Response): Promise<v
         });
     }
 };
+
+export const getNearbyOrganizations = async (req: Request, res: Response): Promise<void> => {
+    try {
+        const lat = parseFloat(req.query.lat as string);
+        const lon = parseFloat(req.query.lon as string);
+        const radius = req.query.radius ? parseFloat(req.query.radius as string) : 10;
+
+        if (isNaN(lat) || isNaN(lon)) {
+            res.status(400).json({
+                success: false,
+                message: "Valid lat and lon query parameters are required"
+            });
+            return;
+        }
+
+        const orgs = await OrgService.getNearbyOrganizations(lat, lon, radius);
+
+        res.status(200).json({
+            success: true,
+            count: orgs.length,
+            data: orgs
+        });
+    } catch (error) {
+        res.status(500).json({
+            success: false,
+            message: "Internal server error"
+        });
+    }
+};
