@@ -1,10 +1,12 @@
-import { useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 
 import { useOrganizations } from '../hooks/useOrganizations';
 import { useNearbyOrganizations } from '../hooks/useNearbyOrganizations';
 import { getCategoryColor } from '../constants/categories';
 import Pagination from '../components/Pagination';
+import Card from '../components/Card';
+import Badge from '../components/Badge';
 
 type ViewMode = 'all' | 'nearby';
 
@@ -59,6 +61,14 @@ const {
     setViewMode('all');
   };
 
+  const changedPage = useRef(false);
+
+  useEffect(() => {
+    if(changedPage.current && !loading) {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  }, [loading]);
+
   if (viewMode === 'all' && loading && organizations.length === 0) {
     return <div className="p-12 text-center text-gray-500 font-medium">Načítám data...</div>;
   }
@@ -68,7 +78,7 @@ const {
 
   return (
     <div className="max-w-[1400px] mx-auto p-8">
-      <h1 className="text-4xl font-extrabold text-[#005A92] mb-8 font-['Manrope',sans-serif]">
+      <h1 className="text-4xl font-extrabold text-brand mb-8 font-['Manrope',sans-serif]">
         {viewMode === 'nearby'
           ? 'Neziskové organizace ve vašem okolí'
           : searchQuery
@@ -79,10 +89,9 @@ const {
       <div className="flex flex-col lg:flex-row gap-8">
 
         <aside className="w-full lg:w-1/4 lg:sticky lg:top-24 self-start">
-          <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
-
+          <Card padding='md'>
             <div className="flex justify-between items-center mb-6">
-              <h2 className="text-xl font-bold text-[#005A92] font-['Manrope',sans-serif]">Filtry</h2>
+              <h2 className="text-xl font-bold text-brand font-['Manrope',sans-serif]">Filtry</h2>
               {hasActiveFilters && viewMode === 'all' && (
                 <button
                   onClick={clearFilters}
@@ -144,7 +153,7 @@ const {
                 <label className="block text-xs font-bold text-gray-500 mb-3 uppercase tracking-wider">
                   Kategorie
                 </label>
-                <div className="space-y-3">
+                <div className="space-y-2 max-h-75 overflow-x-none overflow-y-scroll">
                   {displayedCategories.map(category => (
                     <label
                       key={category.category_id}
@@ -155,7 +164,7 @@ const {
                         value={category.category_id}
                         checked={selectedCategories.includes(category.category_id)}
                         onChange={() => toggleCategory(category.category_id)}
-                        className="w-4 h-4 rounded border-gray-300 text-[#005A92] focus:ring-[#005A92]"
+                        className="w-4 h-4 rounded border-gray-300 text-brand focus:ring-brand"
                       />
                       <span className="text-sm text-gray-700">{category.name}</span>
                     </label>
@@ -165,7 +174,7 @@ const {
                 {categories.length > 4 && (
                   <button
                     onClick={() => setShowAllCategories(v => !v)}
-                    className="mt-3 text-sm text-[#005A92] font-bold hover:underline focus:outline-none"
+                    className="mt-3 text-sm text-brand font-bold hover:underline focus:outline-none"
                   >
                     {showAllCategories ? '- Zobrazit méně' : '+ Zobrazit všechny'}
                   </button>
@@ -175,13 +184,13 @@ const {
               <button
                 onClick={applyFilters}
                 disabled={loading || viewMode === 'nearby'}
-                className="w-full py-3 bg-[#005A92] text-white font-semibold rounded hover:bg-blue-800 transition disabled:opacity-50 cursor-pointer"
+                className="w-full py-3 bg-brand text-white font-semibold rounded hover:bg-blue-800 transition disabled:opacity-50 cursor-pointer"
               >
                 {loading ? 'Filtruji...' : 'Použít filtry'}
               </button>
 
             </fieldset>
-          </div>
+          </Card>
         </aside>
 
         <main className="w-full lg:w-3/4">
@@ -227,7 +236,7 @@ const {
               </p>
               <button
                 onClick={handleBackToAll}
-                className="text-sm font-bold text-[#005A92] hover:underline cursor-pointer"
+                className="text-sm font-bold text-brand hover:underline cursor-pointer"
               >
                 ← Zpět na celý seznam
               </button>
@@ -259,22 +268,20 @@ const {
                 </div>
               ) : (
                 activeOrgs.map(org => (
-                  <div
-                    key={org.organization_id}
-                    className="bg-white rounded-xl p-6 shadow-sm border border-gray-100 flex flex-col h-full hover:shadow-md transition-shadow"
-                  >
+                  <Card key={org.organization_id} hoverable padding='md' className='flex flex-col h-full'>
                     <div className="flex gap-2 mb-4 flex-wrap">
                       {org.organization_category?.map(({ category }) => (
-                        <span
+                        <Badge
                           key={category.category_id}
-                          className={`px-2.5 py-1 text-[10px] font-bold rounded-full uppercase ${getCategoryColor(category.name)}`}
+                          size="sm"
+                          colorClass={getCategoryColor(category.name)}
                         >
                           {category.name}
-                        </span>
+                        </Badge>
                       ))}
                     </div>
 
-                    <h3 className="text-xl font-bold text-[#005A92] mb-3 font-['Manrope',sans-serif] leading-tight">
+                    <h3 className="text-xl font-bold text-brand mb-3 font-['Manrope',sans-serif] leading-tight">
                       {org.name}
                     </h3>
 
@@ -307,11 +314,11 @@ const {
 
                     <Link
                       to={`/org/${org.organization_id}`}
-                      className="w-full py-2.5 bg-[#E9F1FF] text-[#00426D] text-center font-bold rounded hover:text-white hover:bg-[#00426D] transition text-sm"
+                      className="w-full py-2.5 bg-brand-light text-brand-dark text-center font-bold rounded hover:text-white hover:bg-brand-dark transition text-sm"
                     >
                       Zobrazit detail
                     </Link>
-                  </div>
+                  </Card>
                 ))
               )}
             </div>
@@ -326,8 +333,8 @@ const {
                 currentPage={page}
                 totalPages={totalPages}
                 onPageChange={(newPage) => {
+                  changedPage.current = true;
                   setPage(newPage);
-                  window.scrollTo({ top: 0, behavior: 'smooth' });
                 }}
               />
             </>

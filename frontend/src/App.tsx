@@ -29,12 +29,12 @@ function Navigation() {
 
   return (
     <nav className="bg-white border-b border-gray-200 px-8 py-4 flex justify-between items-center sticky top-0 z-[10000]">
-      <div className="flex gap-8 items-center text-lg">
+      <div className="flex gap-8 items-center text-xl">
         <Link
           to="/"
-          className="font-bold text-[#005A92] border-b-2 border-[#005A92] pb-1 font-['Manrope',sans-serif]"
+          className="font-black text-brand font-['Manrope',sans-serif] hover:text-blue-800 transition"
         >
-          Organizace
+          nezisk.cz
         </Link>
       </div>
 
@@ -59,7 +59,7 @@ function Navigation() {
             value={searchTerm}
             onChange={e => setSearchTerm(e.target.value)}
             placeholder="Hledat (název, místo, IČO)"
-            className="pl-11 pr-10 py-2 bg-gray-100 rounded-full text-sm focus:outline-none focus:ring-2 focus:ring-[#005A92] w-72 transition-all"
+            className="pl-11 pr-10 py-2 bg-gray-100 rounded-full text-sm focus:outline-none focus:ring-2 focus:ring-brand w-72 transition-all"
           />
 
           {searchTerm && (
@@ -78,7 +78,7 @@ function Navigation() {
 
         <button
           type="submit"
-          className="px-5 py-2 bg-[#005A92] text-white text-sm font-bold rounded-full hover:bg-blue-800 transition shadow-sm cursor-pointer"
+          className="px-5 py-2 bg-brand text-white text-sm font-bold rounded-full hover:bg-blue-800 transition shadow-sm cursor-pointer"
         >
           Vyhledat
         </button>

@@ -258,7 +258,7 @@ def process_insert_org(row, source_id, session, parent_id=None):
 
 def get_source():
     url = 'https://opendata.csu.gov.cz/soubory/od/od_org03/res_data.csv'
-    filename = "res_data_test.csv"
+    filename = "res_data.csv"
 
     try:
         # 1. Kontrola, či už súbor existuje lokálne na disku

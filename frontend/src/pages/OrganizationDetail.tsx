@@ -10,6 +10,8 @@ import iconShadow from 'leaflet/dist/images/marker-shadow.png';
 import { useOrganization } from '../hooks/useOrganization';
 import { getCategoryColor } from '../constants/categories';
 import type { MapLocation } from '../types/organization';
+import Card from '../components/Card';
+import Badge from '../components/Badge';
 
 // ─── Leaflet default icon fix ─────────────────────────────────────────────────
 
@@ -75,7 +77,7 @@ function ContactList({
       {items.length > CONTACTS_LIMIT && (
         <button
           onClick={onToggle}
-          className="text-xs text-gray-500 hover:text-[#005A92] font-bold mt-2 outline-none"
+          className="text-xs text-gray-500 hover:text-brand font-bold mt-2 outline-none"
         >
           {showAll ? collapseLabel : expandLabel(items.length - CONTACTS_LIMIT)}
         </button>
@@ -141,14 +143,14 @@ export default function OrganizationDetail() {
         {/* Back navigation */}
         <Link
           to="/"
-          className="text-gray-500 hover:text-[#005A92] transition text-sm flex items-center gap-2 mb-6"
+          className="text-gray-500 hover:text-brand transition text-sm flex items-center gap-2 mb-6"
         >
           <span>&larr;</span> zpět na výsledky hledání
         </Link>
 
         {/* Header */}
         <div className="mb-10">
-          <h1 className="text-4xl font-extrabold text-[#005A92] font-['Manrope',sans-serif] mb-2">
+          <h1 className="text-4xl font-extrabold text-brand font-['Manrope',sans-serif] mb-2">
             {org.name}
           </h1>
           <h3 className="text-md text-gray-700 mb-4">
@@ -156,12 +158,13 @@ export default function OrganizationDetail() {
           </h3>
           <div className="flex gap-2 flex-wrap">
             {org.organization_category?.map(({ category }) => (
-              <span
+              <Badge
                 key={category.category_id}
-                className={`px-3 py-1.5 text-xs font-bold rounded-full uppercase tracking-wider ${getCategoryColor(category.name)}`}
+                size="md"
+                colorClass={getCategoryColor(category.name)}
               >
                 {category.name}
-              </span>
+              </Badge>
             ))}
           </div>
         </div>
@@ -173,7 +176,7 @@ export default function OrganizationDetail() {
           <div className="lg:col-span-2 space-y-12">
 
             <section>
-              <h2 className="text-2xl font-bold text-[#005A92] font-['Manrope',sans-serif] mb-4">
+              <h2 className="text-2xl font-bold text-brand font-['Manrope',sans-serif] mb-4">
                 Popis
               </h2>
               <div className="text-gray-700 leading-relaxed text-base">
@@ -188,7 +191,7 @@ export default function OrganizationDetail() {
             </section>
 
             <section>
-              <h2 className="text-2xl font-bold text-[#005A92] font-['Manrope',sans-serif] mb-6">
+              <h2 className="text-2xl font-bold text-brand font-['Manrope',sans-serif] mb-6">
                 Pobočky
               </h2>
 
@@ -233,7 +236,7 @@ export default function OrganizationDetail() {
                     >
                       <div
                         className={`w-12 h-12 rounded-lg flex items-center justify-center flex-shrink-0 ${
-                          loc.isHQ ? 'bg-[#005A92] text-white' : 'bg-[#E2F5EA] text-[#2D6A4F]'
+                          loc.isHQ ? 'bg-brand text-white' : 'bg-accent-light text-accent-dark'
                         }`}
                       >
                         <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -247,7 +250,7 @@ export default function OrganizationDetail() {
                       </div>
                       <div
                         className={`hidden sm:block text-xs font-bold uppercase tracking-wider ${
-                          loc.isHQ ? 'text-[#005A92]' : 'text-gray-400'
+                          loc.isHQ ? 'text-brand' : 'text-gray-400'
                         }`}
                       >
                         {loc.isHQ ? 'Hlavní ústředí' : 'Pobočka'}
@@ -265,8 +268,8 @@ export default function OrganizationDetail() {
 
           {/* Right column — Contact info */}
           <div className="lg:col-span-1">
-            <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-8 sticky top-24">
-              <h3 className="text-2xl font-bold text-[#005A92] font-['Manrope',sans-serif] border-b border-gray-100 pb-4 mb-6">
+            <Card padding='lg'>
+                <h3 className="text-2xl font-bold text-brand font-['Manrope',sans-serif] border-b border-gray-100 pb-4 mb-6">
                 Kontaktní údaje
               </h3>
 
@@ -280,7 +283,7 @@ export default function OrganizationDetail() {
                     </svg>
                     E-mailové adresy
                   </div>
-                  <div className="space-y-2 ml-6 text-sm font-medium text-[#005A92]">
+                  <div className="space-y-2 ml-6 text-sm font-medium text-brand">
                     <ContactList
                       items={org.emails}
                       href={email => `mailto:${email}`}
@@ -320,7 +323,7 @@ export default function OrganizationDetail() {
                     </svg>
                     Webové stránky
                   </div>
-                  <div className="space-y-2 ml-6 text-sm font-medium text-[#005A92]">
+                  <div className="space-y-2 ml-6 text-sm font-medium text-brand">
                     {org.web_url ? (
                       <a
                         href={org.web_url.startsWith('http') ? org.web_url : `https://${org.web_url}`}
@@ -337,7 +340,7 @@ export default function OrganizationDetail() {
                 </div>
 
               </div>
-            </div>
+            </Card>
           </div>
 
         </div>

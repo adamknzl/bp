@@ -64,3 +64,7 @@ export interface MapLocation {
   lat?: number | null;
   lon?: number | null;
 }
+
+export interface NearbyOrganization extends Organization {
+  distance_km: number;
+}

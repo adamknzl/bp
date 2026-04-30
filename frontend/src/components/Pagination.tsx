@@ -39,8 +39,7 @@ export default function Pagination({ currentPage, totalPages, onPageChange }: Pa
 
   const visiblePages = getVisiblePages();
 
-  const baseBtnClass =
-    'min-w-[40px] h-10 px-3 rounded-md text-sm font-medium transition-colors flex items-center justify-center';
+  const baseBtnClass = 'min-w-[40px] h-10 px-3 rounded-md text-sm font-medium transition-colors flex items-center justify-center';
   const activeBtnClass = 'bg-[#005A92] text-white';
   const inactiveBtnClass = 'bg-white text-gray-700 border border-gray-200 hover:bg-gray-50 cursor-pointer';
   const disabledBtnClass = 'bg-white text-gray-300 border border-gray-100 cursor-not-allowed';
