@@ -4,6 +4,7 @@ import { Link, useSearchParams } from 'react-router-dom';
 import { useOrganizations } from '../hooks/useOrganizations';
 import { useNearbyOrganizations } from '../hooks/useNearbyOrganizations';
 import { getCategoryColor } from '../constants/categories';
+import Pagination from '../components/Pagination';
 
 type ViewMode = 'all' | 'nearby';
 
@@ -11,23 +12,28 @@ export default function OrganizationList() {
   const [searchParams] = useSearchParams();
   const searchQuery = searchParams.get('search');
 
-  const {
-    organizations,
-    categories,
-    sizes,
-    legalForms,
-    selectedSize,
-    setSelectedSize,
-    selectedLegalForm,
-    setSelectedLegalForm,
-    selectedCategories,
-    toggleCategory,
-    loading,
-    error,
-    hasActiveFilters,
-    applyFilters,
-    clearFilters,
-  } = useOrganizations(searchQuery);
+const {
+  organizations,
+  categories,
+  sizes,
+  legalForms,
+  selectedSize,
+  setSelectedSize,
+  selectedLegalForm,
+  setSelectedLegalForm,
+  selectedCategories,
+  toggleCategory,
+  loading,
+  error,
+  hasActiveFilters,
+  applyFilters,
+  clearFilters,
+  page,
+  setPage,
+  totalPages,
+  total,
+  pageSize,
+} = useOrganizations(searchQuery);
 
   const {
     organizations: nearbyOrgs,
@@ -309,6 +315,22 @@ export default function OrganizationList() {
                 ))
               )}
             </div>
+          )}
+          {viewMode === 'all' && !loading && activeOrgs.length > 0 && (
+            <>
+              <div className="text-sm text-gray-500 mt-8 text-center">
+                Zobrazeno {(page - 1) * pageSize + 1}–{Math.min(page * pageSize, total)} z {total} organizací
+              </div>
+
+              <Pagination
+                currentPage={page}
+                totalPages={totalPages}
+                onPageChange={(newPage) => {
+                  setPage(newPage);
+                  window.scrollTo({ top: 0, behavior: 'smooth' });
+                }}
+              />
+            </>
           )}
         </main>
 

@@ -22,23 +22,40 @@ export const getLegalForms = async () => {
     }
 };
 
-export const getOrganizations = async (limit: number = 50, filters: any = {}) => {
+export const getOrganizations = async (
+    page: number = 1,
+    pageSize: number = 24,
+    filters: any = {}
+) => {
     try {
-        const organizations = await prisma.organization.findMany({
-            include: {
-                organization_category: {
-                    include: {
-                        category: true
-                    }
+        const skip = (page - 1) * pageSize;
+
+        const [organizations, total] = await prisma.$transaction([
+            prisma.organization.findMany({
+                include: {
+                    organization_category: {
+                        include: {
+                            category: true
+                        }
+                    },
+                    legal_form_rel: true,
+                    size_category_rel: true
                 },
-                legal_form_rel: true,
-                size_category_rel: true
-            },
-            where: filters,
-            take: limit,
-            orderBy: { name: 'asc' }
-        });
-        return organizations;
+                where: filters,
+                skip,
+                take: pageSize,
+                orderBy: { name: 'asc' }
+            }),
+            prisma.organization.count({ where: filters })
+        ]);
+
+        return {
+            organizations,
+            total,
+            page,
+            pageSize,
+            totalPages: Math.ceil(total / pageSize)
+        };
     } catch (error) {
         console.error("Database query failed:", error);
         throw new Error("Failed to fetch organizations");

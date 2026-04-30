@@ -152,7 +152,7 @@ export default function OrganizationDetail() {
             {org.name}
           </h1>
           <h3 className="text-md text-gray-700 mb-4">
-            {org.legal_form_rel?.name}
+            {org.legal_form_rel?.name}, IČO: {org.ico}
           </h3>
           <div className="flex gap-2 flex-wrap">
             {org.organization_category?.map(({ category }) => (

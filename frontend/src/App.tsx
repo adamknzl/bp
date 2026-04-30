@@ -34,10 +34,8 @@ function Navigation() {
           to="/"
           className="font-bold text-[#005A92] border-b-2 border-[#005A92] pb-1 font-['Manrope',sans-serif]"
         >
-          Organizations
+          Organizace
         </Link>
-        <Link to="/" className="text-gray-600 hover:text-gray-900 pb-1 font-medium">Database</Link>
-        <Link to="/" className="text-gray-600 hover:text-gray-900 pb-1 font-medium">Contact</Link>
       </div>
 
       <form onSubmit={handleSearch} className="flex gap-2 items-center">
@@ -60,7 +58,7 @@ function Navigation() {
             type="text"
             value={searchTerm}
             onChange={e => setSearchTerm(e.target.value)}
-            placeholder="Search name or location"
+            placeholder="Hledat (název, místo, IČO)"
             className="pl-11 pr-10 py-2 bg-gray-100 rounded-full text-sm focus:outline-none focus:ring-2 focus:ring-[#005A92] w-72 transition-all"
           />
 
@@ -69,7 +67,7 @@ function Navigation() {
               type="button"
               onClick={handleClearSearch}
               className="absolute right-3 p-1 text-gray-400 hover:text-gray-700 transition rounded-full focus:outline-none"
-              title="Vymazať vyhľadávanie"
+              title="Vymazat vyhledávání"
             >
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
@@ -82,7 +80,7 @@ function Navigation() {
           type="submit"
           className="px-5 py-2 bg-[#005A92] text-white text-sm font-bold rounded-full hover:bg-blue-800 transition shadow-sm cursor-pointer"
         >
-          Vyhľadať
+          Vyhledat
         </button>
       </form>
     </nav>

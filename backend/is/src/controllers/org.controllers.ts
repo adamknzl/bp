@@ -3,7 +3,9 @@ import * as OrgService from '../services/org.service';
 
 export const getAllOrganizations = async (req: Request, res: Response): Promise<void> => {
     try {
-        const limit = req.query.limit ? parseInt(req.query.limit as string, 10) : 50;
+        const page = req.query.page ? parseInt(req.query.page as string, 10) : 1;
+        const pageSize = req.query.pageSize ? parseInt(req.query.pageSize as string, 10) : 24;
+
         const filters: any = {};
 
         if (req.query.ico) {
@@ -27,7 +29,7 @@ export const getAllOrganizations = async (req: Request, res: Response): Promise<
 
         if (req.query.categories) {
             const categoryIds = (req.query.categories as string).split(',');
-            
+
             filters.organization_category = {
                 some: {
                     category_id: {
@@ -38,19 +40,33 @@ export const getAllOrganizations = async (req: Request, res: Response): Promise<
         }
 
         if (req.query.search) {
-            const searchTerm = req.query.search as string;
-            filters.OR = [
-                { name: { contains: searchTerm, mode: 'insensitive' } },
-                { hq_address: { contains: searchTerm, mode: 'insensitive' } }
-            ];
+            const searchTerm = (req.query.search as string).trim();
+            
+            const isIco = /^\d{1,8}$/.test(searchTerm);
+            
+            if (isIco) {
+                const paddedIco = searchTerm.padStart(8, '0');
+                filters.ico = paddedIco;
+            } else {
+                filters.OR = [
+                    { name: { contains: searchTerm, mode: 'insensitive' } },
+                    { hq_address: { contains: searchTerm, mode: 'insensitive' } }
+                ];
+            }
         }
 
-        const orgs = await OrgService.getOrganizations(limit, filters);
+        const result = await OrgService.getOrganizations(page, pageSize, filters);
 
         res.status(200).json({
             success: true,
-            count: orgs.length,
-            data: orgs
+            count: result.organizations.length,
+            data: result.organizations,
+            pagination: {
+                page: result.page,
+                pageSize: result.pageSize,
+                total: result.total,
+                totalPages: result.totalPages
+            }
         });
     } catch (error) {
         res.status(500).json({

@@ -10,6 +10,8 @@ const SESSION_KEYS = {
   categories: 'org_filter_categories',
 } as const;
 
+const PAGE_SIZE = 24;
+
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
 function readSessionCategories(): string[] {
@@ -25,10 +27,12 @@ function buildParams(opts: {
   size?: string;
   legalForm?: string;
   categories?: string[];
-  limit?: number;
+  page?: number;
+  pageSize?: number;
 }): URLSearchParams {
   const params = new URLSearchParams();
-  params.set('limit', String(opts.limit ?? 50));
+  params.set('page', String(opts.page ?? 1));
+  params.set('pageSize', String(opts.pageSize ?? PAGE_SIZE));
   if (opts.searchQuery) params.set('search', opts.searchQuery);
   if (opts.size) params.set('size', opts.size);
   if (opts.legalForm) params.set('legal_form', opts.legalForm);
@@ -42,7 +46,7 @@ export function useOrganizations(searchQuery: string | null) {
   const [organizations, setOrganizations] = useState<Organization[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [sizes, setSizes] = useState<SizeCategory[]>([]);
-  const [legalForms, setLegalForms] = useState<LegalForm[]>([]); // Zmena typu na LegalForm[]
+  const [legalForms, setLegalForms] = useState<LegalForm[]>([]);
 
   // Filter state — initialised from sessionStorage so selections survive navigation
   const [selectedSize, setSelectedSize] = useState<string>(
@@ -53,13 +57,24 @@ export function useOrganizations(searchQuery: string | null) {
   );
   const [selectedCategories, setSelectedCategories] = useState<string[]>(readSessionCategories);
 
+  // Pagination state
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [total, setTotal] = useState(0);
+
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   const hasActiveFilters =
     selectedSize !== '' || selectedLegalForm !== '' || selectedCategories.length > 0;
 
-  // ─── Initial load ──────────────────────────────────────────────────────────
+  // ─── Reset to page 1 when search changes ───────────────────────────────────
+
+  useEffect(() => {
+    setPage(1);
+  }, [searchQuery]);
+
+  // ─── Fetch on page change, search change, or initial load ──────────────────
 
   useEffect(() => {
     const controller = new AbortController();
@@ -73,6 +88,7 @@ export function useOrganizations(searchQuery: string | null) {
           size: sessionStorage.getItem(SESSION_KEYS.size) ?? '',
           legalForm: sessionStorage.getItem(SESSION_KEYS.legalForm) ?? '',
           categories: readSessionCategories(),
+          page,
         });
 
         const [orgsRes, filtersRes] = await Promise.all([
@@ -88,6 +104,8 @@ export function useOrganizations(searchQuery: string | null) {
         ]);
 
         setOrganizations(orgsResult.data);
+        setTotalPages(orgsResult.pagination.totalPages);
+        setTotal(orgsResult.pagination.total);
         setCategories(filtersResult.data.categories);
         setSizes(filtersResult.data.sizes);
         setLegalForms(filtersResult.data.legalForms);
@@ -102,7 +120,7 @@ export function useOrganizations(searchQuery: string | null) {
 
     load();
     return () => controller.abort();
-  }, [searchQuery]);
+  }, [searchQuery, page]);
 
   // ─── Filter actions ────────────────────────────────────────────────────────
 
@@ -122,19 +140,25 @@ export function useOrganizations(searchQuery: string | null) {
       sessionStorage.setItem(SESSION_KEYS.legalForm, selectedLegalForm);
       sessionStorage.setItem(SESSION_KEYS.categories, JSON.stringify(selectedCategories));
 
+      // Reset to page 1 on filter change
+      setPage(1);
+
       const params = buildParams({
         searchQuery,
         size: selectedSize,
         legalForm: selectedLegalForm,
         categories: selectedCategories,
+        page: 1,
       });
 
       const response = await fetch(`${API_BASE_URL}/organizations?${params}`);
-      if (!response.ok) throw new Error('Chyba pri filtrovaní dát');
+      if (!response.ok) throw new Error('Chyba při filtrování dat');
       const result = await response.json();
       setOrganizations(result.data);
+      setTotalPages(result.pagination.totalPages);
+      setTotal(result.pagination.total);
     } catch {
-      setError('Nepodarilo sa aplikovať filtre.');
+      setError('Nepodařilo se aplikovat filtry.');
     } finally {
       setLoading(false);
     }
@@ -144,6 +168,7 @@ export function useOrganizations(searchQuery: string | null) {
     setSelectedSize('');
     setSelectedLegalForm('');
     setSelectedCategories([]);
+    setPage(1);
 
     sessionStorage.removeItem(SESSION_KEYS.size);
     sessionStorage.removeItem(SESSION_KEYS.legalForm);
@@ -152,13 +177,15 @@ export function useOrganizations(searchQuery: string | null) {
     setLoading(true);
     setError(null);
     try {
-      const params = buildParams({ searchQuery });
+      const params = buildParams({ searchQuery, page: 1 });
       const response = await fetch(`${API_BASE_URL}/organizations?${params}`);
-      if (!response.ok) throw new Error('Chyba pri obnove dát');
+      if (!response.ok) throw new Error('Chyba při obnově dat');
       const result = await response.json();
       setOrganizations(result.data);
+      setTotalPages(result.pagination.totalPages);
+      setTotal(result.pagination.total);
     } catch {
-      setError('Nepodarilo sa obnoviť zoznam.');
+      setError('Nepodařilo se obnovit seznam.');
     } finally {
       setLoading(false);
     }
@@ -180,5 +207,11 @@ export function useOrganizations(searchQuery: string | null) {
     hasActiveFilters,
     applyFilters,
     clearFilters,
+    // pagination
+    page,
+    setPage,
+    totalPages,
+    total,
+    pageSize: PAGE_SIZE,
   };
 }
