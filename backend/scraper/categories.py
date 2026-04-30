@@ -1,3 +1,11 @@
+"""
+@file    categories.py
+@brief   Static codebooks (size category, legal form) sourced from the Czech Statistical Office.
+@author  Adam Kinzel (xkinzea00)
+"""
+
+# Size categories of organizations by employee count
+# Codes follow the official ČSÚ RES codebook
 size_category = {
     "000": "Neuvedeno",
     "110": "Bez zaměstnanců",
@@ -21,6 +29,7 @@ size_category = {
     "510": "10 000 a více zaměstnanců"
 }
 
+# Legal forms recognized as nonprofit entities under Czech law
 legal_form = {
     "117": "Nadace" ,
     "118": "Nadační fond" ,

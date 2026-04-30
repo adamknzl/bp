@@ -1,47 +1,57 @@
+"""
+@file    eval_urls.py
+@brief   Evaluation of URL discovery accuracy against a ground-truth dataset.
+@author  Adam Kinzel (xkinzea00)
+"""
+
 import csv
 import re
 from urllib.parse import urlparse
 
 
-def normalize_name(name):
-    """Normalize organization name format (fix missing spaces after commas)."""
-    name = re.sub(r',\s*', ', ', name)
-    return name.strip()
+def _normalize_name(name: str) -> str:
+    """Standardize an organization name (consistent spacing around commas)."""
+    return re.sub(r',\s*', ', ', name).strip()
 
 
-def load_csv_to_dict(filename, url_column_name):
-    """Load a CSV file into a dictionary of format { 'Name': 'URL' }."""
-    data = {}
-    with open(filename, mode='r', encoding='utf-8') as f:
-        reader = csv.DictReader(f, delimiter=';')
-        for row in reader:
-            clean_name = normalize_name(row['name'])
-            data[clean_name] = row[url_column_name]
-    return data
+def _normalize_url(url: str) -> str:
+    """
+    Reduce a URL to a canonical form for fair string comparison.
 
-
-def normalize_url(url):
-    """Normalize a URL for fair comparison (strip www., protocol, and query params)."""
+    Strips protocol, ``www.`` prefix, and trailing slash; lowercases everything.
+    """
     if not url:
         return ""
-
     if not url.startswith(('http://', 'https://')):
         url = 'http://' + url
 
     parsed = urlparse(url.strip())
     netloc = parsed.netloc.replace('www.', '').lower()
     path = parsed.path.rstrip('/').lower()
-
     return netloc + path
 
 
-def run_evaluation():
-    ground_truth_file = 'ground_truth_urls.csv'
-    fetched_file = 'fetched_urls.csv'
+def _load_csv_to_dict(filename: str, url_column: str) -> dict[str, str]:
+    """Load a CSV mapping from organization name to URL."""
+    data: dict[str, str] = {}
+    with open(filename, mode='r', encoding='utf-8') as f:
+        reader = csv.DictReader(f, delimiter=';')
+        for row in reader:
+            data[_normalize_name(row['name'])] = row[url_column]
+    return data
 
+
+# ─── Evaluation entry point ───────────────────────────────────────────────────
+
+def run_evaluation(ground_truth_file: str = 'ground_truth_urls.csv', fetched_file: str = 'fetched_urls.csv') -> None:
+    """
+    Compare fetched URLs against the ground-truth file and report accuracy.
+
+    Prints per-entry success / failure indicators and a summary block at the end.
+    """
     try:
-        truth_data = load_csv_to_dict(ground_truth_file, 'expected_url')
-        fetched_data = load_csv_to_dict(fetched_file, 'best_url')
+        truth_data = _load_csv_to_dict(ground_truth_file, 'expected_url')
+        fetched_data = _load_csv_to_dict(fetched_file, 'best_url')
     except FileNotFoundError as e:
         print(f"ERROR: File not found - {e}")
         return
@@ -50,7 +60,6 @@ def run_evaluation():
     correct = 0
 
     print("\n--- Per-entry results ---\n")
-
     for i, (name, expected_url) in enumerate(truth_data.items(), start=1):
         if name not in fetched_data:
             print(f"URL {i}: Skipped — '{name}' not found in {fetched_file}.")
@@ -59,10 +68,7 @@ def run_evaluation():
         total += 1
         actual_url = fetched_data[name]
 
-        norm_expected = normalize_url(expected_url)
-        norm_actual = normalize_url(actual_url)
-
-        if norm_expected == norm_actual:
+        if _normalize_url(expected_url) == _normalize_url(actual_url):
             correct += 1
             print(f"URL {i}: Success ({name})")
         else:
@@ -75,7 +81,6 @@ def run_evaluation():
         return
 
     accuracy = (correct / total) * 100
-
     print("\n" + "=" * 40)
     print(" URL SEARCH EVALUATION RESULTS")
     print("=" * 40)

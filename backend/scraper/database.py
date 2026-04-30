@@ -1,3 +1,14 @@
+"""
+@file    database.py
+@brief   SQLAlchemy ORM models and session factory for the NPO database.
+@author  Adam Kinzel (xkinzea00)
+
+Defines the relational data model: the central Organization entity, supporting
+codebooks (legal form, size category), the many-to-many link to thematic
+categories, and basic user-management entities. Database connection parameters
+are read from environment variables.
+"""
+
 import os
 import uuid
 from datetime import datetime
@@ -14,6 +25,8 @@ Session = sessionmaker(bind=engine)
 Base = declarative_base()
 
 class Role(Base):
+    """User role (retained for future authorization needs)."""
+
     __tablename__ = "role"
 
     role_id: Mapped[uuid.UUID] = mapped_column(
@@ -27,6 +40,8 @@ class Role(Base):
     description: Mapped[str | None] = mapped_column(sa.Text)
 
 class User(Base):
+    """Registered user of the information system."""
+
     __tablename__ = "user"
 
     user_id: Mapped[uuid.UUID] = mapped_column(
@@ -53,6 +68,8 @@ class User(Base):
     )
 
 class DataSource(Base):
+    """External source from which a batch of organizations was ingested."""
+
     __tablename__ = "data_source"
 
     source_id: Mapped[uuid.UUID] = mapped_column(
@@ -71,6 +88,14 @@ class DataSource(Base):
     )
 
 class Organization(Base):
+    """
+    Central entity representing a single nonprofit organization.
+
+    The hierarchy of parent organizations and their registered subunits
+    (e.g., pobočný spolek) is captured via the self-referential parent_id
+    foreign key.
+    """
+
     __tablename__ = "organization"
 
     organization_id: Mapped[uuid.UUID] = mapped_column(
@@ -124,6 +149,8 @@ class Organization(Base):
     description: Mapped[str | None] = mapped_column(sa.Text)
 
 class LegalForm(Base):
+    """Codebook entry for the legal form of an organization."""
+
     __tablename__ = "legal_form"
 
     code: Mapped[str] = mapped_column(
@@ -134,6 +161,8 @@ class LegalForm(Base):
     name: Mapped[str] = mapped_column(sa.String(255))
 
 class SizeCategory(Base):
+    """Codebook entry for the approximate employee count of an organization."""
+
     __tablename__ = "size_category"
 
     code: Mapped[str] = mapped_column(
@@ -148,6 +177,8 @@ class SizeCategory(Base):
     max_emp: Mapped[int | None] = mapped_column(sa.Integer)
 
 class Branch(Base):
+    """Physical location of an organization discovered from external geographic sources."""
+
     __tablename__ = "branch"
 
     branch_id: Mapped[uuid.UUID] = mapped_column(
@@ -179,6 +210,8 @@ class Branch(Base):
     )
 
 class Category(Base):
+    """Thematic field of activity of an organization."""
+
     __tablename__ = "category"
 
     category_id: Mapped[uuid.UUID] = mapped_column(
@@ -190,6 +223,8 @@ class Category(Base):
     name: Mapped[str] = mapped_column(sa.String(100), unique=True, nullable=False)
 
 class OrganizationCategory(Base):
+    """Associative entity linking organizations to their thematic categories."""
+
     __tablename__ = "organization_category"
 
     organization_id: Mapped[uuid.UUID] = mapped_column(
@@ -205,6 +240,8 @@ class OrganizationCategory(Base):
     )
 
 class NpoManager(Base):
+    """Associative entity assigning a user as a manager of a specific organization."""
+
     __tablename__ = "npo_manager"
 
     user_id: Mapped[uuid.UUID] = mapped_column(
