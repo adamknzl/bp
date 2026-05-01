@@ -32,7 +32,6 @@ from database import (
     SizeCategory,
     engine,
 )
-from osm_api import fetch_branches
 from search_api import get_url
 from utils import (
     fetch_contact_page,
