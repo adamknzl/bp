@@ -1,17 +1,27 @@
+/**
+ * @file  useOrganization.ts
+ * @brief Hook for fetching the detail of a single organization by ID.
+ * @author Adam Kinzel (xkinzea00)
+ */
+
 import { useEffect, useState } from 'react';
 import { API_BASE_URL } from '../config/api';
 import type { OrganizationDetail } from '../types/organization';
 
 interface UseOrganizationResult {
-  org: OrganizationDetail | null;
+  org:     OrganizationDetail | null;
   loading: boolean;
-  error: string | null;
+  error:   string | null;
 }
 
+/**
+ * Fetch the full detail of an organization identified by UUID.
+ * The request is aborted automatically when the component unmounts or the ID changes.
+ */
 export function useOrganization(id: string | undefined): UseOrganizationResult {
-  const [org, setOrg] = useState<OrganizationDetail | null>(null);
+  const [org,     setOrg]     = useState<OrganizationDetail | null>(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [error,   setError]   = useState<string | null>(null);
 
   useEffect(() => {
     if (!id) return;
@@ -29,8 +39,8 @@ export function useOrganization(id: string | undefined): UseOrganizationResult {
         if (!response.ok) {
           throw new Error(
             response.status === 404
-              ? 'Organizácia sa nenašla'
-              : 'Chyba pri sťahovaní detailu',
+              ? 'Organizace nebyla nalezena.'
+              : 'Chyba při načítání detailu.',
           );
         }
 

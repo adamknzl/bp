@@ -1,73 +1,63 @@
-import { useEffect, useState, useRef } from 'react';
-import { Link, useSearchParams } from 'react-router-dom';
+/**
+ * @file  OrganizationList.tsx
+ * @brief Main listing page - renders the filter sidebar, organization card grid,
+ *        GPS proximity search, and pagination controls.
+ * @author Adam Kinzel (xkinzea00)
+ */
 
-import { useOrganizations } from '../hooks/useOrganizations';
+import { useEffect, useState, useRef } from 'react';
+import { Link, useSearchParams }        from 'react-router-dom';
+
+import { useOrganizations }      from '../hooks/useOrganizations';
 import { useNearbyOrganizations } from '../hooks/useNearbyOrganizations';
-import { getCategoryColor } from '../constants/categories';
+import { getCategoryColor }       from '../constants/categories';
+import type { NearbyOrganization } from '../types/organization';
 import Pagination from '../components/Pagination';
-import Card from '../components/Card';
-import Badge from '../components/Badge';
+import Card       from '../components/Card';
+import Badge      from '../components/Badge';
 
 type ViewMode = 'all' | 'nearby';
 
 export default function OrganizationList() {
   const [searchParams] = useSearchParams();
-  const searchQuery = searchParams.get('search');
+  const searchQuery    = searchParams.get('search');
 
-const {
-  organizations,
-  categories,
-  sizes,
-  legalForms,
-  selectedSize,
-  setSelectedSize,
-  selectedLegalForm,
-  setSelectedLegalForm,
-  selectedCategories,
-  toggleCategory,
-  loading,
-  error,
-  hasActiveFilters,
-  applyFilters,
-  clearFilters,
-  page,
-  setPage,
-  totalPages,
-  total,
-  pageSize,
-} = useOrganizations(searchQuery);
+  const {
+    organizations, categories, sizes, legalForms,
+    selectedSize,      setSelectedSize,
+    selectedLegalForm, setSelectedLegalForm,
+    selectedCategories, toggleCategory,
+    loading, error, hasActiveFilters,
+    applyFilters, clearFilters,
+    page, setPage, totalPages, total, pageSize,
+  } = useOrganizations(searchQuery);
 
   const {
     organizations: nearbyOrgs,
     loading: nearbyLoading,
-    error: nearbyError,
+    error:   nearbyError,
     findNearby,
   } = useNearbyOrganizations();
 
   const [showAllCategories, setShowAllCategories] = useState(false);
-  const [viewMode, setViewMode] = useState<ViewMode>('all');
+  const [viewMode,          setViewMode]          = useState<ViewMode>('all');
 
   const displayedCategories = showAllCategories ? categories : categories.slice(0, 4);
 
-  const activeOrgs = viewMode === 'nearby' ? nearbyOrgs : organizations;
+  const activeOrgs    = viewMode === 'nearby' ? nearbyOrgs    : organizations;
   const activeLoading = viewMode === 'nearby' ? nearbyLoading : loading;
 
-  const handleFindNearby = () => {
-    setViewMode('nearby');
-    findNearby(10);
-  };
-
-  const handleBackToAll = () => {
-    setViewMode('all');
-  };
-
-  const changedPage = useRef(false);
-
+  // Scroll to top after page change (only when loading completes)
+  const justChangedPage = useRef(false);
   useEffect(() => {
-    if(changedPage.current && !loading) {
+    if (justChangedPage.current && !loading) {
       window.scrollTo({ top: 0, behavior: 'smooth' });
+      justChangedPage.current = false;
     }
   }, [loading]);
+
+  const handleFindNearby = () => { setViewMode('nearby'); findNearby(10); };
+  const handleBackToAll  = () => { setViewMode('all'); };
 
   if (viewMode === 'all' && loading && organizations.length === 0) {
     return <div className="p-12 text-center text-gray-500 font-medium">Načítám data...</div>;
@@ -88,8 +78,9 @@ const {
 
       <div className="flex flex-col lg:flex-row gap-8">
 
+        {/* Filter sidebar */}
         <aside className="w-full lg:w-1/4 lg:sticky lg:top-24 self-start">
-          <Card padding='md'>
+          <Card padding="md">
             <div className="flex justify-between items-center mb-6">
               <h2 className="text-xl font-bold text-brand font-['Manrope',sans-serif]">Filtry</h2>
               {hasActiveFilters && viewMode === 'all' && (
@@ -103,14 +94,15 @@ const {
             </div>
 
             {viewMode === 'nearby' && (
-              <div className="mb-6 p-3 bg-[#E2F5EA] rounded text-sm text-[#2D6A4F]">
+              <div className="mb-6 p-3 bg-accent-light rounded text-sm text-accent-dark">
                 Zobrazují se organizace v okolí vaší polohy. Pokud chcete použít filtry,
                 nejprve se vraťte na celý seznam.
               </div>
             )}
 
             <fieldset disabled={viewMode === 'nearby'} className="contents">
-              {/* Legal form filter */}
+
+              {/* Legal form */}
               <div className="mb-6">
                 <label className="block text-xs font-bold text-gray-500 mb-2 uppercase tracking-wider">
                   Právní forma
@@ -122,14 +114,12 @@ const {
                 >
                   <option value="">Všechny právní formy</option>
                   {legalForms.map(form => (
-                    <option key={form.code} value={form.code}>
-                      {form.name}
-                    </option>
+                    <option key={form.code} value={form.code}>{form.name}</option>
                   ))}
                 </select>
               </div>
 
-              {/* Size Category filter */}
+              {/* Size category */}
               <div className="mb-6">
                 <label className="block text-xs font-bold text-gray-500 mb-2 uppercase tracking-wider">
                   Velikostní kategorie
@@ -141,24 +131,19 @@ const {
                 >
                   <option value="">Všechny velikosti</option>
                   {sizes.map(size => (
-                    <option key={size.code} value={size.code}>
-                      {size.label}
-                    </option>
+                    <option key={size.code} value={size.code}>{size.label}</option>
                   ))}
                 </select>
               </div>
 
-              {/* Categories */}
+              {/* Thematic categories */}
               <div className="mb-8">
                 <label className="block text-xs font-bold text-gray-500 mb-3 uppercase tracking-wider">
                   Kategorie
                 </label>
-                <div className="space-y-2 max-h-75 overflow-x-none overflow-y-scroll">
+                <div className="space-y-2 max-h-75 overflow-y-scroll">
                   {displayedCategories.map(category => (
-                    <label
-                      key={category.category_id}
-                      className="flex items-center gap-3 cursor-pointer"
-                    >
+                    <label key={category.category_id} className="flex items-center gap-3 cursor-pointer">
                       <input
                         type="checkbox"
                         value={category.category_id}
@@ -193,22 +178,23 @@ const {
           </Card>
         </aside>
 
+        {/* Main content */}
         <main className="w-full lg:w-3/4">
 
-          {/* GPS promo banner — visible only in 'all' view */}
+          {/* GPS promo banner */}
           {viewMode === 'all' && (
-            <div className="bg-[#E2F5EA] border border-[#A8E6CF] rounded-xl p-6 mb-8 flex items-center justify-between">
+            <div className="bg-accent-light border border-accent rounded-xl p-6 mb-8 flex items-center justify-between">
               <div className="flex items-center gap-5">
                 <div className="w-14 h-14 bg-white rounded-lg flex items-center justify-center shadow-sm">
-                  <svg className="w-7 h-7 text-[#2D6A4F] rotate-45" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg className="w-7 h-7 text-accent-dark rotate-45" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
                   </svg>
                 </div>
                 <div>
-                  <h3 className="text-lg font-bold text-[#2D6A4F] font-['Manrope',sans-serif]">
+                  <h3 className="text-lg font-bold text-accent-dark font-['Manrope',sans-serif]">
                     Najít neziskové organizace ve vašem okolí
                   </h3>
-                  <p className="text-[#2D6A4F] text-sm opacity-90 mt-1">
+                  <p className="text-accent-dark text-sm opacity-90 mt-1">
                     Zobrazte neziskové organizace ve vašem okolí pomocí GPS.
                   </p>
                 </div>
@@ -216,7 +202,7 @@ const {
               <button
                 onClick={handleFindNearby}
                 disabled={nearbyLoading}
-                className="flex items-center gap-2 px-5 py-2.5 bg-[#A8E6CF] text-[#2D6A4F] font-bold rounded hover:bg-[#8ee0c2] transition cursor-pointer disabled:opacity-60"
+                className="flex items-center gap-2 px-5 py-2.5 bg-accent text-accent-dark font-bold rounded hover:bg-[#8ee0c2] transition cursor-pointer disabled:opacity-60"
               >
                 {nearbyLoading ? 'Vyhledávám...' : 'Najít organizace v okolí'}
                 {!nearbyLoading && (
@@ -228,36 +214,31 @@ const {
             </div>
           )}
 
-          {/* Back to all banner — visible only in 'nearby' view */}
+          {/* Back-to-all banner */}
           {viewMode === 'nearby' && (
             <div className="bg-white border border-gray-200 rounded-xl p-4 mb-8 flex items-center justify-between">
-              <p className="text-sm text-gray-600">
-                Zobrazují se organizace v okolí vaší polohy.
-              </p>
-              <button
-                onClick={handleBackToAll}
-                className="text-sm font-bold text-brand hover:underline cursor-pointer"
-              >
+              <p className="text-sm text-gray-600">Zobrazují se organizace v okolí vaší polohy.</p>
+              <button onClick={handleBackToAll} className="text-sm font-bold text-brand hover:underline cursor-pointer">
                 ← Zpět na celý seznam
               </button>
             </div>
           )}
 
-          {/* Error state for nearby */}
+          {/* Nearby error */}
           {viewMode === 'nearby' && nearbyError && (
             <div className="p-6 mb-8 bg-red-50 border border-red-200 rounded-xl text-red-700 text-sm">
               {nearbyError}
             </div>
           )}
 
-          {/* Loading state for nearby */}
+          {/* Nearby loading */}
           {viewMode === 'nearby' && nearbyLoading && (
             <div className="p-12 text-center text-gray-500 font-medium">
               Načítám organizace ve vašem okolí...
             </div>
           )}
 
-          {/* Organization cards */}
+          {/* Organization card grid */}
           {!(viewMode === 'nearby' && nearbyLoading) && (
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
               {activeOrgs.length === 0 && !activeLoading ? (
@@ -268,14 +249,10 @@ const {
                 </div>
               ) : (
                 activeOrgs.map(org => (
-                  <Card key={org.organization_id} hoverable padding='md' className='flex flex-col h-full'>
+                  <Card key={org.organization_id} hoverable padding="md" className="flex flex-col h-full">
                     <div className="flex gap-2 mb-4 flex-wrap">
                       {org.organization_category?.map(({ category }) => (
-                        <Badge
-                          key={category.category_id}
-                          size="sm"
-                          colorClass={getCategoryColor(category.name)}
-                        >
+                        <Badge key={category.category_id} size="sm" colorClass={getCategoryColor(category.name)}>
                           {category.name}
                         </Badge>
                       ))}
@@ -285,10 +262,10 @@ const {
                       {org.name}
                     </h3>
 
-                    {/* Distance badge — visible only in 'nearby' view */}
-                    {viewMode === 'nearby' && 'distance_km' in org && (org as any).distance_km != null && (
-                      <div className="text-xs text-[#2D6A4F] font-bold mb-2">
-                        {(org as any).distance_km.toFixed(1)} km od vás
+                    {/* Distance badge - visible only in nearby view */}
+                    {viewMode === 'nearby' && (
+                      <div className="text-xs text-accent-dark font-bold mb-2">
+                        {(org as NearbyOrganization).distance_km.toFixed(1)} km od vás
                       </div>
                     )}
 
@@ -304,7 +281,7 @@ const {
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
                           </svg>
                           <span className="text-sm text-gray-500">
-                            {org.hq_address?.includes(',') 
+                            {org.hq_address?.includes(',')
                               ? org.hq_address.split(',').pop()?.trim().replace(/^\d{3}\s?\d{2}\s+/, '')
                               : org.hq_address}
                           </span>
@@ -323,24 +300,25 @@ const {
               )}
             </div>
           )}
+
+          {/* Pagination */}
           {viewMode === 'all' && !loading && activeOrgs.length > 0 && (
             <>
               <div className="text-sm text-gray-500 mt-8 text-center">
                 Zobrazeno {(page - 1) * pageSize + 1}–{Math.min(page * pageSize, total)} z {total} organizací
               </div>
-
               <Pagination
                 currentPage={page}
                 totalPages={totalPages}
-                onPageChange={(newPage) => {
-                  changedPage.current = true;
+                onPageChange={newPage => {
+                  justChangedPage.current = true;
                   setPage(newPage);
                 }}
               />
             </>
           )}
-        </main>
 
+        </main>
       </div>
     </div>
   );

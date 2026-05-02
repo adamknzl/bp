@@ -1,65 +1,71 @@
+/**
+ * @file  OrganizationDetail.tsx
+ * @brief Detail page for a single nonprofit organization.
+ * @author Adam Kinzel (xkinzea00)
+ *
+ * Renders the organization header, a description section, a Leaflet map with
+ * pins for the HQ and all child organizations, a branch list, and a contact-info sidebar.
+ */
+
 import { useState, useEffect } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link }     from 'react-router-dom';
 
 import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
-import icon from 'leaflet/dist/images/marker-icon.png';
-import iconShadow from 'leaflet/dist/images/marker-shadow.png';
+import icon         from 'leaflet/dist/images/marker-icon.png';
+import iconShadow   from 'leaflet/dist/images/marker-shadow.png';
 
 import { useOrganization } from '../hooks/useOrganization';
 import { getCategoryColor } from '../constants/categories';
 import type { MapLocation } from '../types/organization';
-import Card from '../components/Card';
+import Card  from '../components/Card';
 import Badge from '../components/Badge';
 
-// ─── Leaflet default icon fix ─────────────────────────────────────────────────
 
+// Leaflet icon fix - Vite asset breaks the default icon path, needed to be manually overridden
 L.Marker.prototype.options.icon = L.icon({
-  iconUrl: icon,
+  iconUrl:   icon,
   shadowUrl: iconShadow,
-  iconSize: [25, 41],
-  iconAnchor: [12, 41],
+  iconSize:  [25, 41],
+  iconAnchor:[12, 41],
 });
 
-// ─── Constants ────────────────────────────────────────────────────────────────
 
+// Constants
+
+/** Maximum number of contact items shown before the "show more" toggle. */
 const CONTACTS_LIMIT = 2;
 
-// ─── Sub-components ──────────────────────────────────────────────────────────
 
+// Sub-components
+
+/** Adjusts the map viewport to fit all markers with padding. */
 function FitBounds({ markers }: { markers: MapLocation[] }) {
   const map = useMap();
-
   useEffect(() => {
     if (markers.length > 0) {
-      // Leaflet expects [lat, lng] — note: fixed from original [lon, lat] bug
       const bounds = L.latLngBounds(markers.map(m => [m.lat!, m.lon!]));
       map.fitBounds(bounds, { padding: [50, 50], maxZoom: 13 });
     }
   }, [markers, map]);
-
   return null;
 }
 
 interface ContactListProps {
-  items: string[];
-  href: (item: string) => string;
-  showAll: boolean;
-  onToggle: () => void;
-  expandLabel: (remaining: number) => string;
+  items:        string[];
+  href:         (item: string) => string;
+  showAll:      boolean;
+  onToggle:     () => void;
+  /** Returns the label for the "show N more" button. */
+  expandLabel:  (remaining: number) => string;
   collapseLabel: string;
-  emptyLabel?: string;
+  emptyLabel?:  string;
 }
 
+/** Renders a collapsible list of contact links (emails or phone numbers). */
 function ContactList({
-  items,
-  href,
-  showAll,
-  onToggle,
-  expandLabel,
-  collapseLabel,
-  emptyLabel = 'Neuvedeno',
+  items, href, showAll, onToggle, expandLabel, collapseLabel, emptyLabel = 'Neuvedeno',
 }: ContactListProps) {
   if (!items || items.length === 0) {
     return <span className="text-gray-500 font-normal italic">{emptyLabel}</span>;
@@ -86,7 +92,8 @@ function ContactList({
   );
 }
 
-// ─── Page component ───────────────────────────────────────────────────────────
+
+// Page component
 
 export default function OrganizationDetail() {
   const { id } = useParams<{ id: string }>();
@@ -95,40 +102,35 @@ export default function OrganizationDetail() {
   const [showAllEmails, setShowAllEmails] = useState(false);
   const [showAllPhones, setShowAllPhones] = useState(false);
 
-  if (loading) {
-    return <div className="p-12 text-center text-gray-500 font-medium">Načítám detail...</div>;
-  }
-  if (error) {
-    return <div className="p-12 text-center text-red-500 font-bold">{error}</div>;
-  }
-  if (!org) return null;
+  if (loading) return <div className="p-12 text-center text-gray-500 font-medium">Načítám detail...</div>;
+  if (error)   return <div className="p-12 text-center text-red-500 font-bold">{error}</div>;
+  if (!org)    return null;
 
-  // ─── Build map locations ─────────────────────────────────────────────────
+  // Build map location list
 
   const locations: MapLocation[] = [];
-
-  const hasGeoData = org.lat != null && org.lon != null;
-  const hasChildren = org.other_organization && org.other_organization.length > 0;
+  const hasGeoData  = org.lat != null && org.lon != null;
+  const hasChildren = (org.other_organization?.length ?? 0) > 0;
 
   if (hasGeoData || hasChildren) {
     locations.push({
-      id: org.organization_id,
-      title: 'Centrála organizace',
+      id:      org.organization_id,
+      title:   'Centrála organizace',
       address: org.hq_address ?? 'Adresa centrály neuvedena',
-      isHQ: true,
-      lat: org.lat,
-      lon: org.lon,
+      isHQ:    true,
+      lat:     org.lat,
+      lon:     org.lon,
     });
 
     org.other_organization?.forEach(child => {
       if (child.organization_id !== org.organization_id) {
         locations.push({
-          id: child.organization_id,
-          title: child.name,
+          id:      child.organization_id,
+          title:   child.name,
           address: child.hq_address ?? 'Adresa neuvedena',
-          isHQ: false,
-          lat: child.lat,
-          lon: child.lon,
+          isHQ:    false,
+          lat:     child.lat,
+          lon:     child.lon,
         });
       }
     });
@@ -140,11 +142,7 @@ export default function OrganizationDetail() {
     <div className="min-h-screen bg-[#F8F9FA] pb-20">
       <div className="max-w-[1200px] mx-auto px-8 pt-10">
 
-        {/* Back navigation */}
-        <Link
-          to="/"
-          className="text-gray-500 hover:text-brand transition text-sm flex items-center gap-2 mb-6"
-        >
+        <Link to="/" className="text-gray-500 hover:text-brand transition text-sm flex items-center gap-2 mb-6">
           <span>&larr;</span> zpět na výsledky hledání
         </Link>
 
@@ -158,42 +156,31 @@ export default function OrganizationDetail() {
           </h3>
           <div className="flex gap-2 flex-wrap">
             {org.organization_category?.map(({ category }) => (
-              <Badge
-                key={category.category_id}
-                size="md"
-                colorClass={getCategoryColor(category.name)}
-              >
+              <Badge key={category.category_id} size="md" colorClass={getCategoryColor(category.name)}>
                 {category.name}
               </Badge>
             ))}
           </div>
         </div>
 
-        {/* Main content grid */}
+        {/* Main grid */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-12">
 
           {/* Left column — Description & Branches */}
           <div className="lg:col-span-2 space-y-12">
 
             <section>
-              <h2 className="text-2xl font-bold text-brand font-['Manrope',sans-serif] mb-4">
-                Popis
-              </h2>
+              <h2 className="text-2xl font-bold text-brand font-['Manrope',sans-serif] mb-4">Popis</h2>
               <div className="text-gray-700 leading-relaxed text-base">
-                {org.description ? (
-                  <p>{org.description}</p>
-                ) : (
-                  <p className="italic opacity-60">
-                    Organizace zatím neposkytla bližší popis své činnosti.
-                  </p>
-                )}
+                {org.description
+                  ? <p>{org.description}</p>
+                  : <p className="italic opacity-60">Organizace zatím neposkytla bližší popis své činnosti.</p>
+                }
               </div>
             </section>
 
             <section>
-              <h2 className="text-2xl font-bold text-brand font-['Manrope',sans-serif] mb-6">
-                Pobočky
-              </h2>
+              <h2 className="text-2xl font-bold text-brand font-['Manrope',sans-serif] mb-6">Pobočky</h2>
 
               {/* Map */}
               <div className="w-full h-80 bg-gray-200 rounded-xl mb-6 overflow-hidden shadow-sm border border-gray-100 z-0">
@@ -211,11 +198,7 @@ export default function OrganizationDetail() {
                     <FitBounds markers={mapMarkers} />
                     {mapMarkers.map(loc => (
                       <Marker key={loc.id} position={[loc.lat!, loc.lon!]}>
-                        <Popup>
-                          <strong>{loc.title}</strong>
-                          <br />
-                          {loc.address}
-                        </Popup>
+                        <Popup><strong>{loc.title}</strong><br />{loc.address}</Popup>
                       </Marker>
                     ))}
                   </MapContainer>
@@ -230,15 +213,8 @@ export default function OrganizationDetail() {
               <div className="space-y-4">
                 {locations.length > 0 ? (
                   locations.map(loc => (
-                    <div
-                      key={loc.id}
-                      className="bg-white p-5 rounded-xl flex items-center gap-5 shadow-sm border border-gray-100"
-                    >
-                      <div
-                        className={`w-12 h-12 rounded-lg flex items-center justify-center flex-shrink-0 ${
-                          loc.isHQ ? 'bg-brand text-white' : 'bg-accent-light text-accent-dark'
-                        }`}
-                      >
+                    <div key={loc.id} className="bg-white p-5 rounded-xl flex items-center gap-5 shadow-sm border border-gray-100">
+                      <div className={`w-12 h-12 rounded-lg flex items-center justify-center flex-shrink-0 ${loc.isHQ ? 'bg-brand text-white' : 'bg-accent-light text-accent-dark'}`}>
                         <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
@@ -248,11 +224,7 @@ export default function OrganizationDetail() {
                         <h4 className="text-lg font-bold text-gray-900">{loc.title}</h4>
                         <p className="text-gray-500 text-sm">{loc.address}</p>
                       </div>
-                      <div
-                        className={`hidden sm:block text-xs font-bold uppercase tracking-wider ${
-                          loc.isHQ ? 'text-brand' : 'text-gray-400'
-                        }`}
-                      >
+                      <div className={`hidden sm:block text-xs font-bold uppercase tracking-wider ${loc.isHQ ? 'text-brand' : 'text-gray-400'}`}>
                         {loc.isHQ ? 'Hlavní ústředí' : 'Pobočka'}
                       </div>
                     </div>
@@ -266,10 +238,10 @@ export default function OrganizationDetail() {
             </section>
           </div>
 
-          {/* Right column — Contact info */}
+          {/* Right column - Contact info */}
           <div className="lg:col-span-1">
-            <Card padding='lg'>
-                <h3 className="text-2xl font-bold text-brand font-['Manrope',sans-serif] border-b border-gray-100 pb-4 mb-6">
+            <Card padding="lg" className="sticky top-24">
+              <h3 className="text-2xl font-bold text-brand font-['Manrope',sans-serif] border-b border-gray-100 pb-4 mb-6">
                 Kontaktní údaje
               </h3>
 
