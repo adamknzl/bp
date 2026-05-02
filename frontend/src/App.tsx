@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { BrowserRouter, Routes, Route, Link, useNavigate, useSearchParams } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Link, useNavigate, useSearchParams, useLocation } from 'react-router-dom';
 import 'leaflet/dist/leaflet.css';
 
 import OrganizationList from './pages/OrganizationList';
@@ -9,6 +9,7 @@ import OrganizationDetail from './pages/OrganizationDetail';
 
 function Navigation() {
   const navigate = useNavigate();
+  const location = useLocation();
   const [searchParams] = useSearchParams();
   const [searchTerm, setSearchTerm] = useState(searchParams.get('search') ?? '');
 
@@ -27,11 +28,27 @@ function Navigation() {
     navigate('/');
   };
 
+  const handleLogoClick = (e: React.MouseEvent) => {
+    e.preventDefault();
+
+    sessionStorage.removeItem('org_filter_size');
+    sessionStorage.removeItem('org_filter_legal_form');
+    sessionStorage.removeItem('org_filter_categories');
+
+    setSearchTerm('');
+    navigate('/', { replace: true });
+
+    if (location.pathname === '/' && !location.search) {
+      window.location.reload();
+    }
+  }
+
   return (
     <nav className="bg-white border-b border-gray-200 px-8 py-4 flex justify-between items-center sticky top-0 z-[10000]">
       <div className="flex gap-8 items-center text-xl">
         <Link
           to="/"
+          onClick={handleLogoClick}
           className="font-black text-brand font-['Manrope',sans-serif] hover:text-blue-800 transition"
         >
           nezisk.cz

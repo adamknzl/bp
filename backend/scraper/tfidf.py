@@ -96,7 +96,7 @@ def _fetch_corpus() -> tuple[list[str], list[str], list[str]]:
     Download web content for all organizations with a known URL.
 
     Returns:
-        tuple: ``(names, urls, texts)`` of organizations whose pages yielded
+        tuple: (names, urls, texts) of organizations whose pages yielded
         sufficient text for TF-IDF analysis.
     """
     session = Session()

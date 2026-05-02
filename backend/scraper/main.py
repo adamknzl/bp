@@ -66,10 +66,10 @@ _LEGAL_FORMS_DATA = {
 }
 
 _THEMATIC_CATEGORIES = (
-    "Social services", "Education", "Healthcare", "Culture", "Environment",
-    "Sports", "Youth", "Senior support", "Disability support",
-    "Community development", "Human rights", "Charity & fundraising",
-    "Arts & creative activities", "Animal welfare", "Other",
+    "Sociální služby", "Vzdělávání", "Zdravotnictví", "Kultura", "Životní prostředí",
+    "Sport", "Mládež", "Podpora seniorů", "Zdravotně postižení",
+    "Komunitní rozvoj", "Lidská práva", "Charita a fundraising",
+    "Umění a tvůrčí činnost", "Ochrana zvířat", "Ostatní",
 )
 
 
@@ -384,20 +384,31 @@ def init_pipeline(npo_data: pd.DataFrame | None, args) -> None:
 
         records = npo_data.to_dict(orient='records')
 
+        # If the script is executed with the -l argument,
+        # a randomly selected sample of the given amount
+        # will be processed.
         if args.limit:
             print(f"Limiting execution to {args.limit} records.")
             final_limit = min(args.limit, len(records))
             records = random.sample(records, final_limit)
 
+        current_processing_idx = 0
+
         # First pass - parent organizations.
         for row in records:
             if row.get('FORMA') != _BRANCH_LEGAL_FORM_CODE:
+                current_processing_idx += 1
+                print(f"[{current_processing_idx} / {args.limit}] Processing: {row.get('FIRMA')}")
+                
                 process_insert_org(row, source.source_id, session)
         session.commit()
 
         # Second pass - branches linked to their parents.
         for row in records:
             if row.get('FORMA') == _BRANCH_LEGAL_FORM_CODE:
+                current_processing_idx += 1
+                print(f"[{current_processing_idx} / {args.limit}] Processing branch: {row.get('FIRMA')}")
+
                 parent_name_guess = str(row.get('FIRMA')).split(',')[0].strip()
                 parent_id = _find_parent_for_branch(parent_name_guess, session)
                 process_insert_org(row, source.source_id, session, parent_id)

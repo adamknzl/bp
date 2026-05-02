@@ -1,3 +1,7 @@
+// @file   schema.prisma
+// @brief  Prisma data model for the NPO information system.
+// @author Adam Kinzel (xkinzea00)
+
 generator client {
   provider = "prisma-client-js"
 }
@@ -6,43 +10,39 @@ datasource db {
   provider = "postgresql"
 }
 
+// Codebooks 
+
+/// Legal form of an organization as defined by the Czech Statistical Office.
+/// Example: code "706" → "Spolek"
 model legal_form {
-  code         String         @id @db.VarChar(10) // napr. "706"
-  name         String         @db.VarChar(150)    // napr. "Spolek"
-  
+  code String @id @db.VarChar(10)
+  name String @db.VarChar(150)
+
   organization organization[]
 }
 
+/// Size category of an organization by approximate employee count.
+/// Example: code "120" → "1 - 5 zaměstnanců"
 model size_category {
-  code         String         @id @db.VarChar(10) // napr. "120"
-  label        String         @db.VarChar(50)     // napr. "1 - 5 zaměstnanců"
-  min_emp      Int?
-  max_emp      Int?
-  
+  code    String @id @db.VarChar(10)
+  label   String @db.VarChar(50)
+  min_emp Int?
+  max_emp Int?
+
   organization organization[]
 }
 
-model branch {
-  branch_id       String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  organization_id String? @db.Uuid
-  city            String? @db.VarChar(100)
-  street          String? @db.VarChar(150)
-  email           String? @db.VarChar(120)
-  tel_num         String? @db.VarChar(30)
-  lat             Float?
-  lon             Float?
-
-  organization organization? @relation(fields: [organization_id], references: [organization_id], onDelete: NoAction, onUpdate: NoAction)
-
-  @@unique([organization_id, lat, lon], map: "uq_branch_org_lat_lon")
-}
-
+/// Thematic field of activity assigned to an organization by the LLM pipeline.
 model category {
   category_id           String                  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   name                  String?                 @unique(map: "category_name_unique") @db.VarChar(100)
   organization_category organization_category[]
 }
 
+
+// Data provenance
+
+/// External source from which a batch of organizations was ingested (e.g. ČSÚ CSV).
 model data_source {
   source_id    String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   name         String         @db.VarChar(100)
@@ -51,64 +51,77 @@ model data_source {
   organization organization[]
 }
 
-model npo_manager {
-  user_id         String @db.Uuid
-  organization_id String @db.Uuid
-  user            user   @relation(fields: [user_id], references: [user_id], onDelete: NoAction, onUpdate: NoAction)
 
-  @@id([user_id, organization_id])
+// Core domain
+
+/// Physical branch of an organization discovered from external geographic sources.
+/// Unique per organization by GPS coordinates (uq_branch_org_lat_lon).
+model branch {
+  branch_id       String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  organization_id String?       @db.Uuid
+  city            String?       @db.VarChar(100)
+  street          String?       @db.VarChar(150)
+  email           String?       @db.VarChar(120)
+  tel_num         String?       @db.VarChar(30)
+  lat             Float?
+  lon             Float?
+
+  organization organization? @relation(
+    fields:     [organization_id],
+    references: [organization_id],
+    onDelete:   NoAction,
+    onUpdate:   NoAction
+  )
+
+  @@unique([organization_id, lat, lon], map: "uq_branch_org_lat_lon")
 }
 
+/// Central entity representing a single nonprofit organization.
+///
+/// The self-referential parent_id captures the hierarchy between parent
+/// organizations (Spolek, legal form 706) and their registered branches
+/// (Pobočný spolek, legal form 736). GPS coordinates of the registered seat
+/// are stored for map visualization and proximity-based queries.
 model organization {
-  organization_id    String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  source_id          String?        @db.Uuid
-  parent_id          String?        @db.Uuid
-  name               String         @db.VarChar(200)
-  ico                String         @unique @db.VarChar(20)
+  organization_id    String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  source_id          String? @db.Uuid
+  parent_id          String? @db.Uuid   // null for top-level organizations
+
+  name               String  @db.VarChar(200)
+  ico                String  @unique @db.VarChar(20)
   web_url            String?
-  created_at         DateTime       @db.Timestamp(6)
+  created_at         DateTime @db.Timestamp(6)
   hq_address         String?
   lat                Float?
   lon                Float?
-  description        String?
-  emails             String[]       @db.VarChar(120)
-  tel_numbers        String[]       @db.VarChar(30)
+  description        String?  // LLM-generated summary of the organization's activity
+  emails             String[] @db.VarChar(120)
+  tel_numbers        String[] @db.VarChar(30)
 
-  legal_form_code    String?        @db.VarChar(10)
-  size_category_code String?        @db.VarChar(10)
+  legal_form_code    String?  @db.VarChar(10)
+  size_category_code String?  @db.VarChar(10)
 
-  legal_form_rel     legal_form?    @relation(fields: [legal_form_code], references: [code], onDelete: NoAction, onUpdate: NoAction)
-  size_category_rel  size_category? @relation(fields: [size_category_code], references: [code], onDelete: NoAction, onUpdate: NoAction)
+  // Codebook relations
+  legal_form_rel    legal_form?    @relation(fields: [legal_form_code], references: [code], onDelete: NoAction, onUpdate: NoAction)
+  size_category_rel size_category? @relation(fields: [size_category_code], references: [code], onDelete: NoAction, onUpdate: NoAction)
 
+  // Self-referential hierarchy (parent ↔ children)
   organization       organization?  @relation("organizationToorganization", fields: [parent_id], references: [organization_id], onDelete: NoAction, onUpdate: NoAction)
   other_organization organization[] @relation("organizationToorganization")
-  data_source        data_source?   @relation(fields: [source_id], references: [source_id], onDelete: NoAction, onUpdate: NoAction)
 
+  // Other relations
+  data_source           data_source?           @relation(fields: [source_id], references: [source_id], onDelete: NoAction, onUpdate: NoAction)
   organization_category organization_category[]
   branches              branch[]
 }
 
+/// Associative entity linking organizations to their thematic categories (M:N).
 model organization_category {
-  organization_id String   @db.Uuid
-  category_id     String   @db.Uuid
-  category        category @relation(fields: [category_id], references: [category_id], onDelete: NoAction, onUpdate: NoAction)
+  organization_id String @db.Uuid
+  category_id     String @db.Uuid
 
-  organization    organization @relation(fields: [organization_id], references: [organization_id], onDelete: NoAction, onUpdate: NoAction)
+  category     category     @relation(fields: [category_id],     references: [category_id],     onDelete: NoAction, onUpdate: NoAction)
+  organization organization @relation(fields: [organization_id], references: [organization_id], onDelete: NoAction, onUpdate: NoAction)
 
   @@id([organization_id, category_id])
-}
-
-model role {
-  role_id     String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  name        String  @db.VarChar(50)
-  description String?
-}
-
-model user {
-  user_id       String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  name          String        @db.VarChar(100)
-  email         String        @unique @db.VarChar(120)
-  password_hash String
-  created_at    DateTime?     @default(now()) @db.Timestamp(6)
-  npo_manager   npo_manager[]
 }

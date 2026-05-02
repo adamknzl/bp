@@ -18,10 +18,10 @@ _TEMPERATURE = 0.2
 # Categories the LLM is allowed to choose from.
 # Must remain in sync with the database codebook of categories.
 _AVAILABLE_CATEGORIES = (
-    "Social services", "Education", "Healthcare", "Culture", "Environment",
-    "Sports", "Youth", "Senior support", "Disability support",
-    "Community development", "Human rights", "Charity & fundraising",
-    "Arts & creative activities", "Animal welfare", "Other",
+    "Sociální služby", "Vzdělávání", "Zdravotnictví", "Kultura", "Životní prostředí",
+    "Sport", "Mládež", "Podpora seniorů", "Zdravotně postižení",
+    "Komunitní rozvoj", "Lidská práva", "Charita a fundraising",
+    "Umění a tvůrčí činnost", "Ochrana zvířat", "Ostatní",
 )
 
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
@@ -29,21 +29,27 @@ client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
 def _build_prompt(npo_name: str, web_content: str) -> str:
     """Compose the user prompt instructing the LLM to classify and describe an NPO."""
+    
     categories_list = "\n".join(f"- {c}" for c in _AVAILABLE_CATEGORIES)
+    
     return f"""
     You are analyzing a Czech non-profit organization strictly based on the
     information provided - its name and the content of its landing web page.
 
     Task:
-    1) Assign 1-4 most relevant categories from the predefined list.
-    2) Write a concise, neutral description (max 80 words, 3 sentences).
+    1) Assign 1-3 most relevant categories from the predefined list.
+    2) Write a concise, neutral description IN CZECH (max 80 words, 3 sentences).
     3) Use only the provided information. Do not invent facts.
 
     Return ONLY valid JSON in this format:
     {{
       "categories": ["Category1", "Category2"],
-      "description": "Short description text."
+      "description": "Stručný popis činnosti organizace v češtině."
     }}
+
+    Important:
+    - Categories MUST be in English, exactly as listed below.
+    - Description MUST be in Czech.
 
     Available categories:
     {categories_list}

@@ -30,7 +30,7 @@ export const getOrganizations = async (
     try {
         const skip = (page - 1) * pageSize;
 
-        const [organizations, total] = await prisma.$transaction([
+        const [organizations, total] = await Promise.all([
             prisma.organization.findMany({
                 include: {
                     organization_category: {

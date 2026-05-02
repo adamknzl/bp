@@ -24,49 +24,6 @@ engine = sa.create_engine(f"postgresql+psycopg2://{db_user}:{db_password}@localh
 Session = sessionmaker(bind=engine)
 Base = declarative_base()
 
-class Role(Base):
-    """User role (retained for future authorization needs)."""
-
-    __tablename__ = "role"
-
-    role_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True),
-        primary_key=True,
-        server_default=sa.text("gen_random_uuid()")
-    )
-
-    name: Mapped[str | None] = mapped_column(sa.String(50), nullable=False)
-
-    description: Mapped[str | None] = mapped_column(sa.Text)
-
-class User(Base):
-    """Registered user of the information system."""
-
-    __tablename__ = "user"
-
-    user_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True),
-        primary_key=True,
-        server_default=sa.text("gen_random_uuid()")
-    )
-
-    role_id: Mapped[uuid.UUID | None] = mapped_column(
-        UUID(as_uuid=True),
-        sa.ForeignKey("role.role_id"),
-        nullable=True
-    )
-
-    name: Mapped[str | None] = mapped_column(sa.String(100), nullable=False)
-
-    email: Mapped[str | None] = mapped_column(sa.String(120), nullable=False, unique=True)
-
-    password_hash: Mapped[str | None] = mapped_column(sa.Text, nullable=False)
-
-    created_at: Mapped[datetime] = mapped_column(
-        sa.TIMESTAMP,
-        server_default=sa.func.now()
-    )
-
 class DataSource(Base):
     """External source from which a batch of organizations was ingested."""
 
@@ -236,22 +193,5 @@ class OrganizationCategory(Base):
     category_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True),
         sa.ForeignKey("category.category_id"),
-        primary_key=True
-    )
-
-class NpoManager(Base):
-    """Associative entity assigning a user as a manager of a specific organization."""
-
-    __tablename__ = "npo_manager"
-
-    user_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True),
-        sa.ForeignKey("user.user_id"),
-        primary_key=True
-    )
-
-    organization_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True),
-        sa.ForeignKey("organization.organization_id"),
         primary_key=True
     )

@@ -18,7 +18,7 @@ def _normalize_url(url: str) -> str:
     """
     Reduce a URL to a canonical form for fair string comparison.
 
-    Strips protocol, ``www.`` prefix, and trailing slash; lowercases everything.
+    Strips protocol, www. prefix, and trailing slash; lowercases everything.
     """
     if not url:
         return ""
