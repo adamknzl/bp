@@ -16,7 +16,7 @@ def sample_source(args) -> None:
     print("Reading res_data.csv...")
     chunks = []
     for chunk in pd.read_csv('data/res_data.csv', chunksize=10000, sep=',', low_memory=False):
-        if(not 'v likvidaci' in chunk[chunk['FIRMA']]):
+        if not chunk['FIRMA'].str.contains('v likvidaci', case=False, na=False).any():
             chunks.append(chunk[chunk['FORMA'].isin(_NPO_LEGAL_FORM_CODES)])
 
     if not chunks:
@@ -73,7 +73,7 @@ if __name__ == "__main__":
     if args.output is None:
         args.output = {
             'source':       'data/res_data_sample.csv',
-            'ground-truth': 'data/ground_truth_urls.csv',
+            'ground-truth': 'data/test.csv',
         }[args.mode]
 
     if args.mode == 'source':
