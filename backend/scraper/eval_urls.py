@@ -43,7 +43,7 @@ def _load_csv_to_dict(filename: str, url_column: str) -> dict[str, str]:
 
 # ─── Evaluation entry point ───────────────────────────────────────────────────
 
-def run_evaluation(ground_truth_file: str = 'ground_truth_urls.csv', fetched_file: str = 'fetched_urls.csv') -> None:
+def run_evaluation(ground_truth_file: str = 'data/ground_truth_urls.csv', fetched_file: str = 'data/fetched_urls.csv') -> None:
     """
     Compare fetched URLs against the ground-truth file and report accuracy.
 

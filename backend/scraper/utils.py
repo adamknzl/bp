@@ -36,7 +36,7 @@ _PHONE_REGEX = re.compile(r'(?:\+420|\+421)?[\s/]*\d{3}[\s/]*\d{3}[\s/]*\d{3}')
 _CONTACT_LINK_REGEX = re.compile(r'(kontakty?|spojen[ií]|napi[sš]te|kde n[aá]s)', re.IGNORECASE)
 
 
-def log_url(name: str, best_url: str, filename="fetched_urls.csv") -> None:
+def log_url(name: str, best_url: str, filename="data/fetched_urls.csv") -> None:
     """Append a (name, url) pair to a CSV file, creating it with a header if missing."""
     file_exists = os.path.isfile(filename)
 

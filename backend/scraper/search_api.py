@@ -149,7 +149,7 @@ def score_url(url: str, npo_name: str, title: str) -> int:
 
     # Acronym match
     acronym = "".join(w[0] for w in keywords if w).lower()
-    if len(acronym) >= 3 and acronym in domain_part:
+    if len(acronym) >= 3 and acronym == domain_part:
         score += 20
         word_match = True
 
@@ -233,11 +233,7 @@ def get_url(npo_name: str) -> str | None:
         candidate was found across all queries.
     """
     search_name = clean_npo_name(npo_name)
-    queries = [
-        f"{search_name} oficiální stránky",
-        f"{search_name} web",
-        search_name,
-    ]
+    queries = [ f"{search_name} oficiální stránky" ]
 
     try:
         for query in queries:

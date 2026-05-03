@@ -4,9 +4,8 @@
 @author  Adam Kinzel (xkinzea00)
 
 Defines the relational data model: the central Organization entity, supporting
-codebooks (legal form, size category), the many-to-many link to thematic
-categories, and basic user-management entities. Database connection parameters
-are read from environment variables.
+codebooks (legal form, size category) and the many-to-many link to thematic
+categories. Database connection parameters are read from environment variables.
 """
 
 import os

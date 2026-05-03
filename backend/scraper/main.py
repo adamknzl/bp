@@ -45,7 +45,7 @@ from utils import (
 
 
 _CSV_SOURCE_URL = 'https://opendata.csu.gov.cz/soubory/od/od_org03/res_data.csv'
-_CSV_LOCAL_FILENAME = "res_data.csv"
+_CSV_LOCAL_FILENAME = "data/res_data_sample.csv"
 
 # Legal form codes considered as nonprofit organizations (ČSÚ codebook).
 _NPO_LEGAL_FORM_CODES = (117, 118, 141, 161, 706, 721, 722, 736)
@@ -362,6 +362,8 @@ def _find_parent_for_branch(parent_name_guess: str, session):
         select(Organization.organization_id)
         .where(Organization.name.ilike(f"{parent_name_guess}%"))
         .where(Organization.parent_id.is_(None))
+        .where(Organization.legal_form_code != '736')
+        .order_by(Organization.name.asc())
         .limit(1)
     ).scalar()
 
