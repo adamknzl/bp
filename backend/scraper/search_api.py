@@ -6,6 +6,7 @@
 
 import os
 import re
+from dotenv import load_dotenv
 from difflib import SequenceMatcher
 from urllib.parse import urlparse
 
@@ -14,8 +15,10 @@ from unidecode import unidecode
 
 from utils import clean_npo_name
 
+load_dotenv()
 
-SERPER_API_URL = "https://google.serper.dev/search"
+
+SERPER_API_URL = os.getenv("SERPER_API_URL")
 SERPER_API_KEY = os.getenv("SERPER_API_KEY")
 
 

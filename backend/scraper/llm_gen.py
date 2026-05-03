@@ -8,9 +8,11 @@ import json
 import os
 
 from openai import OpenAI
+from dotenv import load_dotenv
 
 from utils import get_web_content
 
+load_dotenv()
 
 _MODEL = "gpt-4o-mini"
 _TEMPERATURE = 0.2

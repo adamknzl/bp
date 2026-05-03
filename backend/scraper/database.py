@@ -12,11 +12,13 @@ are read from environment variables.
 import os
 import uuid
 from datetime import datetime
+from dotenv import load_dotenv
 
 import sqlalchemy as sa
 from sqlalchemy.dialects.postgresql import UUID, ARRAY
 from sqlalchemy.orm import Mapped, mapped_column, sessionmaker, declarative_base
 
+load_dotenv()
 
 db_password = os.getenv("DB_PASSWORD")
 db_user = os.getenv("DB_USER")
