@@ -39,9 +39,9 @@ No API keys are required.
 
 **1. Create the database and load seed data**
 ```bash
-psql -U postgres -c "CREATE DATABASE npo_db;"
-psql -U postgres -c "CREATE EXTENSION IF NOT EXISTS pgcrypto;" -d npo_db
-psql -U postgres -d npo_db < data/seed.sql
+psql -U postgres -h localhost -c "CREATE DATABASE npo_db;"
+psql -U postgres -h localhost -c "CREATE EXTENSION IF NOT EXISTS pgcrypto;" -d npo_db
+psql -U postgres -h localhost -d npo_db < backend/scraper/data/seed.sql
 ```
 
 **2. Configure and start the backend**

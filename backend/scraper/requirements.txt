@@ -9,3 +9,4 @@ scikit_learn==1.8.0
 SQLAlchemy==2.0.49
 trafilatura==2.0.0
 Unidecode==1.4.0
+psycopg2-binary==2.9.12
