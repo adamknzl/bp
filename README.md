@@ -1,7 +1,8 @@
-# Nonprofit Information System
-
-Information system for nonprofit organizations in the Czech Republic.  
+# Nonprofit Information System and Web Scraping Pipeline
+  
 Bachelor's thesis, Adam Kinzel (xkinzea00), FIT VUT Brno, 2026.
+
+**Thesis title:** Non-profit Organisations Analysis by Searching Available Online Resources
 
 ---
 
@@ -10,13 +11,13 @@ Bachelor's thesis, Adam Kinzel (xkinzea00), FIT VUT Brno, 2026.
 ```
 bp_src/
 ├── backend/
-│   ├── is/          — Express/TypeScript REST API
+│   ├── is/          — TypeScript REST API
 │   └── scraper/     — Python ETL pipeline
-├── frontend/        — React/TypeScript/Vite UI
+├── frontend/        — React UI
 └── data/
-    ├── seed.sql                — Database dump (~X organizations, ready to use)
-    ├── res_data_sample.csv     — Sample ČSÚ input for pipeline demo (1000 orgs)
-    └── ground_truth_urls.csv  — Ground truth dataset for URL accuracy evaluation
+    ├── seed.sql                — Database dump (ready to use)
+    ├── res_data_sample.csv     — Sample of ČSÚ data for pipeline demo (1000 orgs)
+    └── ground_truth_urls.csv   — Ground truth dataset for URL accuracy evaluation
 ```
 
 ---
@@ -31,10 +32,10 @@ bp_src/
 
 ---
 
-## Quick start — preloaded database (recommended)
+## Starting the information system
 
 This path loads the prebuilt database and starts the application.
-No API keys required.
+No API keys are required.
 
 **1. Create the database and load seed data**
 ```bash
@@ -81,7 +82,7 @@ http://localhost:5173
 
 The pipeline requires valid API keys for two external services:
 
-- **Serper API** — web search for URL discovery. Free tier: 2 500 queries. Register at [serper.dev](https://serper.dev).
+- **Serper API** — web search for URL discovery. Free tier includes 2 500 queries. Registration possible at [serper.dev](https://serper.dev).
 - **OpenAI API** — GPT-4o-mini for description and category generation. Register at [platform.openai.com](https://platform.openai.com).
 
 These keys are only needed to run the pipeline. The preloaded `seed.sql` is sufficient to evaluate all application features without them.
@@ -159,7 +160,7 @@ python eval_urls.py
 
 ## Dataset notes
 
-The full ČSÚ register (~500 MB) is **not included** in this submission. It is publicly available at [opendata.csu.gov.cz](https://opendata.csu.gov.cz) and is downloaded automatically by `main.py` when no local file is found.
+The full ČSÚ register (~500 MB) is **not included** in this archive. It is publicly available at [csu.gov.cz](https://csu.gov.cz/produkty/registr-ekonomickych-subjektu-otevrena-data) and is downloaded automatically by `main.py` when no local file is found.
 
 To force a fresh download of the full dataset, delete `data/res_data.csv` and rerun the pipeline.  
-The ČSÚ register is updated approximately twice a month.
+The ČSÚ register is updated twice a month and contains data as of the 15th and last day of the month. The data files are updated several days later.
