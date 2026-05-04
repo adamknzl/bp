@@ -49,10 +49,19 @@ cd backend/is
 cp .env.example .env
 # Edit .env — fill in your PostgreSQL credentials
 npm install
+```
+
+**3. Run Prisma ORM**
+```bash
+npx prisma generate
+```
+
+**4. Start the backend**
+```bash
 npm run dev
 ```
 
-**3. Start the frontend** (new terminal)
+**5. Start the frontend** (new terminal)
 ```bash
 cd frontend
 cp .env.example .env
@@ -61,7 +70,7 @@ npm install
 npm run dev
 ```
 
-**4. Open the application**
+**6. Open the application**
 ```
 http://localhost:5173
 ```
