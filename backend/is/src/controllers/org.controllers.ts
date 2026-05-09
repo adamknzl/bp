@@ -51,20 +51,34 @@ function buildFilters(query: Request['query']): OrgFilters {
         };
     }
 
-    if (query.search) {
-        const searchTerm = (query.search as string).trim();
-        const isIco = /^\d{1,8}$/.test(searchTerm);
-
-        if (isIco) {
-            // Pad to 8 digits to match the zero-padded storage format.
-            filters.ico = searchTerm.padStart(8, '0');
-        } else {
-            filters.OR = [
-                { name:       { contains: searchTerm, mode: 'insensitive' } },
-                { hq_address: { contains: searchTerm, mode: 'insensitive' } },
-            ];
-        }
+    if (query.has_branches === 'true') {
+        filters.other_organization = { some: {} };
     }
+
+    const searchTerm = query.search ? (query.search as string).trim() : '';
+    const isIco = /^\d{1,8}$/.test(searchTerm);
+
+    const isDirectLookup = !!(
+        query.ico ||
+        isIco ||
+        query.name ||
+        (searchTerm && !isIco)
+    );
+
+    if (searchTerm) {
+    if (isIco) {
+        filters.ico = searchTerm.padStart(8, '0');
+    } else {
+        filters.OR = [
+            { name:       { contains: searchTerm, mode: 'insensitive' } },
+            { hq_address: { contains: searchTerm, mode: 'insensitive' } },
+        ];
+    }
+}
+
+if (!isDirectLookup && query.include_empty !== 'true') {
+    filters.description = { not: null };
+}
 
     return filters;
 }

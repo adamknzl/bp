@@ -54,8 +54,15 @@ def normalize_url(url: str) -> str:
 
 
 def _domain_no_tld(domain: str) -> str:
-    """Return the second-level domain part (example for www.example.cz)."""
-    return domain.split('.')[-2] if '.' in domain else domain
+    """Return the most specific non-www domain part."""
+    if domain.startswith('www.'):
+        domain = domain[4:]
+        
+    parts = domain.split('.')
+    # If subdomain exists, it's more specific than the SLD
+    if len(parts) >= 3:
+        return parts[0]
+    return parts[-2] if len(parts) >= 2 else domain
 
 
 def _detect_branch_location(clean_name: str) -> list[str]:
@@ -71,8 +78,25 @@ def _detect_branch_location(clean_name: str) -> list[str]:
             return [w for w in loc_part.split() if len(w) > 2]
     return []
 
+def _no_website_flag(results: list, threshold: float = 0.8) -> bool:
+    """
+    Return True if the majority of results (set by threshold) are blacklisted domains.
+    
+    When most results are directories or aggregators, it indicates the
+    organization likely has no official website worth discovering.
+    """
+    if not results:
+        return True
+    
+    blacklisted = sum(
+        1 for item in results
+        if any(b in urlparse(item.get("link", "")).netloc.lower()
+            for b in DOMAIN_BLACKLIST)
+    )
 
-def score_url(url: str, npo_name: str, title: str) -> int:
+    return (blacklisted / len(results)) >= threshold
+
+def score_url(url: str, npo_name: str, title: str, debug: bool = False) -> int:
     """
     Score a candidate URL against an NPO name and search-result title.
 
@@ -83,25 +107,43 @@ def score_url(url: str, npo_name: str, title: str) -> int:
     Returns:
         int: Scoring value, -100 for results that should be excluded entirely.
     """
+    def log(msg: str):
+        if debug:
+            print(f"    {msg}")
+
     score = 0
     parsed = urlparse(url)
     domain = parsed.netloc.lower()
     path = parsed.path.lower()
     query_string = parsed.query.lower()
 
+    _SCORING_STOPWORDS = {
+        'cesky', 'ceska', 'české', 'czech',
+        'spolek', 'svaz', 'ustav', 'nadace',
+        'zakladni', 'organizace', 'pobocka',
+        'obecne', 'prospesna', 'spolecnost',
+        'pod', 'nad', 'pro', 'pri',
+    }
+
+    log(f"── {url}")
+
     # Hard exclusions
     if any(b in domain for b in DOMAIN_BLACKLIST):
+        log("EXCLUDE: domain is blacklisted")
         return -100
 
     url_context = unidecode(domain + path)
     if 'rejstrik' in url_context or 'databaze' in url_context:
+        log("EXCLUDE: rejstrik/databaze in URL")
         return -100
 
     # Soft penalties
     if query_string:
         score -= 20
+        log("-20: has query string")
     if _LONG_DIGIT_PATH_REGEX.search(path):
         score -= 50
+        log("-50: long digit sequence in path")
 
     # Branch-location enforcement
     clean_npo_lower = unidecode(npo_name.lower())
@@ -115,47 +157,72 @@ def score_url(url: str, npo_name: str, title: str) -> int:
             for lw in location_words
         )
         if not loc_match:
+            log(f"EXCLUDE: branch location words {location_words} not found in domain/title/path")
             return -100
+        else:
+            log(f"OK: branch location words {location_words} matched")
 
     # URL structure bonuses
     if path in ('', '/'):
         score += 15
+        log("+15: root path")
     elif len(path.strip('/').split('/')) == 1:
         score += 5
+        log("+5: single-level path")
     else:
         score -= 15
+        log(f"-15: deep path ({path})")
 
     # TLD preference
-    if domain.endswith('.cz') or domain.endswith('.eu'):
-        score += 5
-    elif domain.endswith('.org'):
-        score += 2
+    if not (domain.endswith('.cz') or domain.endswith('.eu') or domain.endswith('.org')):
+        score -= 20
+        log("-20: non-preferred TLD")
+    else:
+        log("+0: preferred TLD")
 
-    # Keyword matching against domain and title
+    # Keyword and acronym matching
     clean_name = unidecode(clean_npo_name(npo_name).lower())
-    keywords = [w for w in clean_name.split() if len(w) > 3]
+    keywords = [w for w in clean_name.split() if len(w) > 3 and w not in _SCORING_STOPWORDS]
+    acronym = "".join(w[0] for w in clean_name.split() if len(w) >= 2).lower()
+
+    log(f"keywords: {keywords}, acronym: {acronym}, domain_part: {domain_part}")
 
     word_match = False
+    domain_word_match = False
+
     for kw in keywords:
         if kw in domain_part:
             score += 25
             word_match = True
+            domain_word_match = True
+            log(f"+25: keyword '{kw}' in domain")
         elif _name_similarity(kw, domain_part) > 0.8:
             score += 15
             word_match = True
+            domain_word_match = True
+            log(f"+15: keyword '{kw}' similar to domain (similarity={_name_similarity(kw, domain_part):.2f})")
         if kw in title_lower:
-            score += 10
+            bonus = 10 if domain_word_match else 3
+            score += bonus
             word_match = True
+            log(f"+{bonus}: keyword '{kw}' in title {'(domain matched)' if domain_word_match else '(no domain match)'}")
 
-    # Acronym match
-    acronym = "".join(w[0] for w in keywords if w).lower()
-    if len(acronym) >= 3 and acronym == domain_part:
+    # Acronym match against domain — handles cases like fknl.webnode.cz
+    # where domain_part is the subdomain 'fknl', not 'webnode'
+    if len(acronym) >= 2 and acronym == domain_part:
         score += 20
         word_match = True
+        domain_word_match = True
+        log(f"+20: acronym '{acronym}' matches domain")
 
     if not word_match:
         score -= 20
+        log("-20: no word match at all")
+    if not domain_word_match:
+        score -= 30
+        log("-30: no domain word match")
 
+    log(f"── final score: {score}")
     return score
 
 
@@ -204,7 +271,7 @@ def _evaluate_results(results: list, npo_name: str) -> tuple[str | None, int, li
         if not url:
             continue
 
-        current_score = score_url(url, npo_name, title)
+        current_score = score_url(url, npo_name, title, debug=True)
         all_scored.append({"url": url, "score": current_score})
 
         domain = urlparse(url).netloc.lower()
@@ -221,7 +288,7 @@ def _evaluate_results(results: list, npo_name: str) -> tuple[str | None, int, li
     return best_url, best_score, all_scored
 
 
-def get_url(npo_name: str) -> str | None:
+def get_url(npo_name: str) -> tuple[str | None, int]:
     """
     Discover the official website URL of a Czech nonprofit organization.
 
@@ -233,7 +300,12 @@ def get_url(npo_name: str) -> str | None:
         candidate was found across all queries.
     """
     search_name = clean_npo_name(npo_name)
-    queries = [ f"{search_name} oficiální stránky" ]
+    
+    acronym_query = "".join(w[0] for w in search_name.split() if len(w) >= 3 or w.isupper() or w.lower() in ['sk', 'fk', 'tj'])
+    
+    queries = [search_name]
+    #if acronym_query and len(acronym_query) >= 2:
+    #    queries.append(acronym_query)
 
     try:
         for query in queries:
@@ -244,6 +316,10 @@ def get_url(npo_name: str) -> str | None:
                 print("  No results returned, trying next query...")
                 continue
 
+            if _no_website_flag(results):
+                print(f"  Most results are blacklisted domains - likely no website exists.")
+                return None, 0
+
             best_url, best_score, all_scored = _evaluate_results(results, npo_name)
 
             print(f"\n--- Results for '{npo_name}' (query: '{query}') ---")
@@ -253,13 +329,13 @@ def get_url(npo_name: str) -> str | None:
 
             if best_url:
                 print(f"Found after query '{query}': '{best_url}' (score: {best_score})")
-                return best_url
+                return best_url, best_score
 
             print("No sufficient URL found, trying next query...")
 
         print(f"No URL found for '{npo_name}' across all queries.")
-        return None
+        return None, 0
 
     except Exception as e:
         print(f"Unexpected error while searching for '{npo_name}': {e}")
-        return None
+        return None, 0

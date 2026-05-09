@@ -40,7 +40,7 @@ from utils import (
     get_gps,
     get_html,
     get_tel_numbers,
-    log_url,
+    get_web_content,
 )
 
 
@@ -156,7 +156,7 @@ def upsert_categories() -> None:
         session.close()
 
 
-def _resolve_url(row: dict, ico_val: str, parent_id, session) -> str | None:
+def _resolve_url(row: dict, ico_val: str, parent_id, session) -> tuple[str | None, int]:
     """
     Determine the website URL of an organization, reusing cached values when possible.
 
@@ -169,23 +169,23 @@ def _resolve_url(row: dict, ico_val: str, parent_id, session) -> str | None:
     ).scalar()
     if existing_url is not None:
         print(f"Organization {row.get('FIRMA')} has a URL in database, skipping search...")
-        url = existing_url
-    else:
-        url = get_url(row.get('FIRMA'))
+        return existing_url, 999  # already verified, treat as max confidence
 
-    # Branch fallback: inherit the parent's URL if we did not find anything.
+    url, score = get_url(row.get('FIRMA'))
+
     if not url and parent_id is not None:
         parent_url = session.execute(
             select(Organization.web_url).where(Organization.organization_id == parent_id)
         ).scalar()
         if parent_url:
             print(f"Branch inherits URL from parent: {parent_url}")
-            url = parent_url
+            return parent_url, 999  # inherited, treat as trusted
 
-    return url
+    return url, score
 
 
-def _resolve_description(row: dict, ico_val: str, branch_url: str, session) -> tuple[str | None, list | None]:
+
+def _resolve_description(row: dict, ico_val: str, web_content: str | None, session) -> tuple[str | None, list | None]:
     """
     Generate or retrieve description and category list for an organization.
 
@@ -198,8 +198,11 @@ def _resolve_description(row: dict, ico_val: str, branch_url: str, session) -> t
     ).scalar()
 
     if existing_desc is None:
+        if not web_content:
+            print(f"Organization {row.get('FIRMA')} has no web content, skipping generation.")
+            return None, []
         print(f"Organization {row.get('FIRMA')} has no description, generating...")
-        gen_res = llm_gen.generate(row.get('FIRMA'), branch_url)
+        gen_res = llm_gen.generate(row.get('FIRMA'), web_content)
         return gen_res.get('description'), gen_res.get('categories', [])
 
     print(f"Organization {row.get('FIRMA')} already has a description, skipping generation.")
@@ -264,6 +267,8 @@ def process_insert_org(row: dict, source_id, session, parent_id=None):
     Skips organizations missing an IČO or in liquidation, or those for which the
     LLM step returned no categories.
     """
+    VERIFY_SCORE_THRESHOLD = 80 # skip verification for very high confidence matches
+
     ico_val = _parse_zfilled_code(row.get('ICO'), width=8)
     if ico_val is None:
         return None
@@ -274,12 +279,13 @@ def process_insert_org(row: dict, source_id, session, parent_id=None):
     legal_form_code = _parse_zfilled_code(row.get('FORMA'), width=3)
     size_cat_code = _parse_zfilled_code(row.get('KATPO'), width=3)
 
-    branch_url = _resolve_url(row, ico_val, parent_id, session)
-    description, categories = _resolve_description(row, ico_val, branch_url, session)
+    branch_url, best_score = _resolve_url(row, ico_val, parent_id, session)
 
-    # An organization without categories is not persisted.
-    if categories is not None and len(categories) == 0:
-        return None
+    web_content = None
+    if branch_url:
+        web_content = get_web_content(branch_url)
+
+    description, categories = _resolve_description(row, ico_val, branch_url, session)
 
     emails, tel_numbers = _extract_contact_info(branch_url)
 
@@ -305,7 +311,6 @@ def process_insert_org(row: dict, source_id, session, parent_id=None):
         "lon": lon,
     }
 
-    log_url(row.get('FIRMA'), branch_url)
     org_id = _upsert_organization(org_data, session)
 
     if org_id and categories:
@@ -370,6 +375,13 @@ def _find_parent_for_branch(parent_name_guess: str, session):
 
 def init_pipeline(npo_data: pd.DataFrame | None, args) -> None:
     """Run the two-pass pipeline: parents first, then branches with parent linking."""
+
+    run_num   = os.getenv("RUN_NUMBER", "?")
+    total_runs = os.getenv("TOTAL_RUNS", "?")
+    print(f"{'='*40}")
+    print(f" Pipeline run {run_num} / {total_runs}")
+    print(f"{'='*40}")
+
     if npo_data is None or npo_data.empty:
         print("No data to process.")
         return
@@ -384,7 +396,15 @@ def init_pipeline(npo_data: pd.DataFrame | None, args) -> None:
         session.add(source)
         session.flush()
 
-        records = npo_data.to_dict(orient='records')
+        existing_icos = set(
+            row[0] for row in session.execute(select(Organization.ico)).all()
+        )
+
+        records = [
+            r for r in npo_data.to_dict(orient='records')
+            if _parse_zfilled_code(r.get('ICO'), width=8) not in existing_icos
+        ]
+        print(f"{len(records)} unprocessed organizations remaining.")
 
         # If the script is executed with the -l argument,
         # a randomly selected sample of the given amount
@@ -400,7 +420,7 @@ def init_pipeline(npo_data: pd.DataFrame | None, args) -> None:
         for row in records:
             if row.get('FORMA') != _BRANCH_LEGAL_FORM_CODE:
                 current_processing_idx += 1
-                print(f"[{current_processing_idx} / {args.limit}] Processing: {row.get('FIRMA')}")
+                print(f"[Run {run_num}] [{current_processing_idx} / {len(records)}] Processing: {row.get('FIRMA')}")
                 
                 process_insert_org(row, source.source_id, session)
         session.commit()
@@ -409,7 +429,7 @@ def init_pipeline(npo_data: pd.DataFrame | None, args) -> None:
         for row in records:
             if row.get('FORMA') == _BRANCH_LEGAL_FORM_CODE:
                 current_processing_idx += 1
-                print(f"[{current_processing_idx} / {args.limit}] Processing branch: {row.get('FIRMA')}")
+                print(f"[{current_processing_idx} / {len(records)}] Processing branch: {row.get('FIRMA')}")
 
                 parent_name_guess = str(row.get('FIRMA')).split(',')[0].strip()
                 parent_id = _find_parent_for_branch(parent_name_guess, session)
@@ -419,7 +439,9 @@ def init_pipeline(npo_data: pd.DataFrame | None, args) -> None:
         print("Data import successful.")
     except Exception as e:
         session.rollback()
-        print(f"Error during import: {e}")
+        #print(f"Error during import: {e}")
+        import traceback
+        traceback.print_exc()  # replace the print(f"Error during import: {e}") line
     finally:
         session.close()
 

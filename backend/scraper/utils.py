@@ -6,9 +6,8 @@
 
 import requests
 import re
-import csv
-import os
 import time
+from unidecode import unidecode
 from bs4 import BeautifulSoup
 from trafilatura import fetch_url, extract
 from urllib.parse import urljoin
@@ -34,19 +33,6 @@ _REGISTERED_OFFICE_REGEX = re.compile(r'(?i)se\s+sídlem.*')
 _EMAIL_REGEX = re.compile(r'[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}')
 _PHONE_REGEX = re.compile(r'(?:\+420|\+421)?[\s/]*\d{3}[\s/]*\d{3}[\s/]*\d{3}')
 _CONTACT_LINK_REGEX = re.compile(r'(kontakty?|spojen[ií]|napi[sš]te|kde n[aá]s)', re.IGNORECASE)
-
-
-def log_url(name: str, best_url: str, filename="data/fetched_urls.csv") -> None:
-    """Append a (name, url) pair to a CSV file, creating it with a header if missing."""
-    file_exists = os.path.isfile(filename)
-
-    with open(filename, mode='a', encoding='utf-8', newline='') as f:
-        writer = csv.writer(f, delimiter=';')
-
-        if not file_exists:
-            writer.writerow(['name', 'best_url'])
-
-        writer.writerow([name, best_url if best_url else ""])
 
 def clean_npo_name(name: str) -> str:
     """

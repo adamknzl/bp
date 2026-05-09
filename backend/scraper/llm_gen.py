@@ -9,8 +9,11 @@ import os
 
 from openai import OpenAI
 from dotenv import load_dotenv
-
-from utils import get_web_content
+from tenacity import(
+    retry,
+    stop_after_attempt,
+    wait_random_exponential,
+)
 
 load_dotenv()
 
@@ -27,7 +30,7 @@ _AVAILABLE_CATEGORIES = (
 )
 
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
-
+_MAX_CONTENT_CHARS = 3000
 
 def _build_prompt(npo_name: str, web_content: str) -> str:
     """Compose the user prompt instructing the LLM to classify and describe an NPO."""
@@ -62,8 +65,8 @@ def _build_prompt(npo_name: str, web_content: str) -> str:
     {web_content}
     """
 
-
-def generate(npo_name: str, url: str) -> dict:
+@retry(wait=wait_random_exponential(min=1, max=60), stop=stop_after_attempt(3))
+def generate(npo_name: str, web_content: str) -> dict:
     """
     Generate a description and category assignment for an NPO.
 
@@ -74,14 +77,19 @@ def generate(npo_name: str, url: str) -> dict:
     Returns:
         dict: JSON object with keys categories (list[str]) and description (str).
     """
-    web_content = get_web_content(url)
-    prompt = _build_prompt(npo_name, web_content)
+    trunc = (web_content or "")[:_MAX_CONTENT_CHARS]
+    prompt = _build_prompt(npo_name, trunc)
 
     response = client.chat.completions.create(
         model=_MODEL,
         messages=[{"role": "user", "content": prompt}],
         temperature=_TEMPERATURE,
         response_format={"type": "json_object"},
+        timeout=30,
     )
 
-    return json.loads(response.choices[0].message.content)
+    try:
+        return json.loads(response.choices[0].message.content)
+    except json.JSONDecodeError as e:
+        print(f"Failed to parse LLM response for '{npo_name}': {e}")
+        return {"categories": [], "description": None}

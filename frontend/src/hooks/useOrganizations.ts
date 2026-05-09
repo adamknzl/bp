@@ -42,6 +42,8 @@ function buildParams(opts: {
   categories?:  string[];
   page?:        number;
   pageSize?:    number;
+  showAll?:     boolean;
+  hasBranches?: boolean;
 }): URLSearchParams {
   const params = new URLSearchParams();
   params.set('page',     String(opts.page     ?? 1));
@@ -50,6 +52,8 @@ function buildParams(opts: {
   if (opts.size)             params.set('size',          opts.size);
   if (opts.legalForm)        params.set('legal_form',    opts.legalForm);
   if (opts.categories?.length) params.set('categories', opts.categories.join(','));
+  if (opts.showAll)          params.set('include_empty', 'true');
+  if (opts.hasBranches)      params.set('has_branches', 'true');
   return params;
 }
 
@@ -66,6 +70,9 @@ export function useOrganizations(searchQuery: string | null) {
   const [selectedSize,       setSelectedSize]       = useState(() => sessionStorage.getItem(SESSION_KEYS.size)      ?? '');
   const [selectedLegalForm,  setSelectedLegalForm]  = useState(() => sessionStorage.getItem(SESSION_KEYS.legalForm) ?? '');
   const [selectedCategories, setSelectedCategories] = useState<string[]>(readSessionCategories);
+  
+  const [showAll, setShowAll]         = useState(false);
+  const [hasBranches, setHasBranches] = useState(false);
 
   // Pagination
   const [page,       setPage]       = useState(1);
@@ -76,7 +83,7 @@ export function useOrganizations(searchQuery: string | null) {
   const [error,   setError]   = useState<string | null>(null);
 
   const hasActiveFilters =
-    selectedSize !== '' || selectedLegalForm !== '' || selectedCategories.length > 0;
+    selectedSize !== '' || selectedLegalForm !== '' || selectedCategories.length > 0 || showAll || hasBranches;
 
   // Reset to page 1 when the search query changes
   useEffect(() => { setPage(1); }, [searchQuery]);
@@ -95,6 +102,8 @@ export function useOrganizations(searchQuery: string | null) {
           legalForm:  sessionStorage.getItem(SESSION_KEYS.legalForm) ?? '',
           categories: readSessionCategories(),
           page,
+          showAll,
+          hasBranches,
         });
 
         const [orgsRes, filtersRes] = await Promise.all([
@@ -155,6 +164,8 @@ export function useOrganizations(searchQuery: string | null) {
         legalForm:  selectedLegalForm,
         categories: selectedCategories,
         page:       1,
+        showAll,
+        hasBranches,
       });
 
       const response = await fetch(`${API_BASE_URL}/organizations?${params}`);
@@ -175,6 +186,8 @@ export function useOrganizations(searchQuery: string | null) {
     setSelectedSize('');
     setSelectedLegalForm('');
     setSelectedCategories([]);
+    setShowAll(false);
+    setHasBranches(false);
     setPage(1);
 
     sessionStorage.removeItem(SESSION_KEYS.size);
@@ -206,6 +219,8 @@ export function useOrganizations(searchQuery: string | null) {
     selectedSize,      setSelectedSize,
     selectedLegalForm, setSelectedLegalForm,
     selectedCategories, toggleCategory,
+    showAll, setShowAll,
+    hasBranches, setHasBranches,
     loading,
     error,
     hasActiveFilters,

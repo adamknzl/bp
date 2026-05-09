@@ -37,14 +37,16 @@ bp_src/
 This path loads the prebuilt database and starts the application.
 No API keys are required.
 
-**1. Create the database and load seed data**
+**1. Unzip the archive**
+
+**2. Create the database and load seed data**
 ```bash
 psql -U postgres -h localhost -c "CREATE DATABASE npo_db;"
 psql -U postgres -h localhost -c "CREATE EXTENSION IF NOT EXISTS pgcrypto;" -d npo_db
 psql -U postgres -h localhost -d npo_db < backend/scraper/data/seed.sql
 ```
 
-**2. Configure and start the backend**
+**3. Configure and start the backend**
 ```bash
 cd backend/is
 cp .env.example .env
@@ -52,26 +54,24 @@ cp .env.example .env
 npm install
 ```
 
-**3. Run Prisma ORM**
+**4. Run Prisma ORM**
 ```bash
 npx prisma generate
 ```
 
-**4. Start the backend**
+**5. Start the backend**
 ```bash
 npm run dev
 ```
 
-**5. Start the frontend** (new terminal)
+**6. Start the frontend** (new terminal)
 ```bash
 cd frontend
-cp .env.example .env
-# VITE_API_URL is pre-filled, change only if your backend runs on a different port
 npm install
 npm run dev
 ```
 
-**6. Open the application**
+**7. Open the application**
 ```
 http://localhost:5173
 ```

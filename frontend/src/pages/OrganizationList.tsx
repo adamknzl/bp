@@ -28,6 +28,8 @@ export default function OrganizationList() {
     selectedLegalForm, setSelectedLegalForm,
     selectedCategories, toggleCategory,
     loading, error, hasActiveFilters,
+    showAll, setShowAll,
+    hasBranches, setHasBranches,
     applyFilters, clearFilters,
     page, setPage, totalPages, total, pageSize,
   } = useOrganizations(searchQuery);
@@ -134,6 +136,31 @@ export default function OrganizationList() {
                     <option key={size.code} value={size.code}>{size.label}</option>
                   ))}
                 </select>
+              </div>
+
+              {/* Branches and Incomplete Records */}
+              <div className="mb-8 space-y-3">
+                <label className="flex items-center gap-3 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={hasBranches}
+                    onChange={e => setHasBranches(e.target.checked)}
+                    disabled={viewMode === 'nearby'}
+                    className="w-4 h-4 rounded border-gray-300 text-brand focus:ring-brand"
+                  />
+                  <span className="text-sm text-gray-700">Pouze organizace s pobočkami</span>
+                </label>
+
+                <label className="flex items-center gap-3 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={showAll}
+                    onChange={e => setShowAll(e.target.checked)}
+                    disabled={viewMode === 'nearby'}
+                    className="w-4 h-4 rounded border-gray-300 text-brand focus:ring-brand"
+                  />
+                  <span className="text-sm text-gray-700">Zobrazit i neúplné záznamy</span>
+                </label>
               </div>
 
               {/* Thematic categories */}
