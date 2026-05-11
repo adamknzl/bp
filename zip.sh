@@ -24,7 +24,8 @@ zip -r "$OUTPUT" . \
     --exclude "*/env/*" \
     --exclude "*/build/*" \
     --exclude "*/.env" \
-    --exclude "*/.vscode/*" \
+    --exclude ".vscode/*" \
+    --exclude ".vscode" \
     --exclude "*/res_data.csv" \
     --exclude "*/fetched_urls.csv" \
     --exclude "*/search_cache/*" \
@@ -53,6 +54,12 @@ if unzip -l "$OUTPUT" | grep -q "node_modules/"; then
     echo "WARNING: node_modules found in zip!"
 else
     echo "OK: No node_modules"
+fi
+
+if unzip -l "$OUTPUT" | grep -q "\.vscode"; then
+    echo "WARNING: .vscode directory found in zip!"
+else
+    echo "OK: No .vscode"
 fi
 
 if unzip -l "$OUTPUT" | grep -qE "^.*\.env$" | grep -v "\.env\.example"; then
