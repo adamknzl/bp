@@ -175,7 +175,7 @@ export const getNearbyOrganizations = async (req: Request, res: Response): Promi
     try {
         const lat    = parseFloat(req.query.lat    as string);
         const lon    = parseFloat(req.query.lon    as string);
-        const radius = req.query.radius ? parseFloat(req.query.radius as string) : 10;
+        const radius = req.query.radius ? parseFloat(req.query.radius as string) : 500000;
 
         if (isNaN(lat) || isNaN(lon)) {
             res.status(400).json({

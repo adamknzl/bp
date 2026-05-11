@@ -58,7 +58,8 @@ export default function OrganizationList() {
     }
   }, [loading]);
 
-  const handleFindNearby = () => { setViewMode('nearby'); findNearby(10); };
+  const NEARBY_RADIUS_KM = 50;
+  const handleFindNearby = () => { setViewMode('nearby'); findNearby(NEARBY_RADIUS_KM); };
   const handleBackToAll  = () => { setViewMode('all'); };
 
   if (viewMode === 'all' && loading && organizations.length === 0) {
