@@ -1,6 +1,6 @@
 /**
  * @file  App.tsx
- * @brief Root application component — sets up routing and the top navigation bar.
+ * @brief Root application component - sets up routing and the top navigation bar.
  * @author Adam Kinzel (xkinzea00)
  */
 
@@ -15,9 +15,9 @@ import OrganizationList   from './pages/OrganizationList';
 import OrganizationDetail from './pages/OrganizationDetail';
 
 
-// ─── Navigation ───────────────────────────────────────────────────────────────
+// Navigation
 
-/** Keys used by the filter persistence layer — kept in sync with useOrganizations. */
+/** Keys used by the filter persistence layer - kept in sync with useOrganizations. */
 const FILTER_SESSION_KEYS = [
   'org_filter_size',
   'org_filter_legal_form',
@@ -47,7 +47,7 @@ function Navigation() {
   };
 
   /**
-   * Navigate to the homepage and reset all filter + search state.
+   * Navigate to the homepage and reset all filter and search state.
    * If the user is already on the homepage with no active search, force a
    * full reload to reset the React state inside OrganizationList.
    */
@@ -117,7 +117,7 @@ function Navigation() {
 }
 
 
-// ─── App ──────────────────────────────────────────────────────────────────────
+// App
 
 export default function App() {
   return (

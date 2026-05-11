@@ -17,6 +17,7 @@ from utils import clean_npo_name
 
 load_dotenv()
 
+# Configuration
 
 SERPER_API_URL = os.getenv("SERPER_API_URL")
 SERPER_API_KEY = os.getenv("SERPER_API_KEY")
@@ -39,6 +40,7 @@ DOMAIN_BLACKLIST = (
 # Czech sub-organization indicators used to detect branch entities.
 _BRANCH_INDICATORS = ('mistni organizace', 'okresni organizace', 'pobocka', 'oddil', 'stredisko')
 
+# Used for penalizing URLs with long numerical sequences in their path
 _LONG_DIGIT_PATH_REGEX = re.compile(r'\d{6,}')
 
 
@@ -48,7 +50,7 @@ def _name_similarity(a: str, b: str) -> float:
 
 
 def normalize_url(url: str) -> str:
-    """Reduce a URL to its scheme + hostname root."""
+    """Reduce a URL to its scheme and hostname root."""
     parsed = urlparse(url)
     return f"{parsed.scheme}://{parsed.netloc}/"
 
@@ -59,7 +61,7 @@ def _domain_no_tld(domain: str) -> str:
         domain = domain[4:]
         
     parts = domain.split('.')
-    # If subdomain exists, it's more specific than the SLD
+    # If a subdomain exists, it is more specific than the 2nd level domain
     if len(parts) >= 3:
         return parts[0]
     return parts[-2] if len(parts) >= 2 else domain
@@ -67,7 +69,7 @@ def _domain_no_tld(domain: str) -> str:
 
 def _detect_branch_location(clean_name: str) -> list[str]:
     """
-    If the cleaned NPO name indicates a branch, return location words from the suffix.
+    If the cleaned NPO name indicates a branch, return strings from the suffix.
 
     Returns an empty list when the name does not contain a branch indicator.
     """
@@ -107,7 +109,9 @@ def score_url(url: str, npo_name: str, title: str, debug: bool = False) -> int:
     Returns:
         int: Scoring value, -100 for results that should be excluded entirely.
     """
+    
     def log(msg: str):
+        """Used for debugging based on achieved scores."""
         if debug:
             print(f"    {msg}")
 
@@ -125,7 +129,7 @@ def score_url(url: str, npo_name: str, title: str, debug: bool = False) -> int:
         'pod', 'nad', 'pro', 'pri',
     }
 
-    log(f"── {url}")
+    log(f"-- {url}")
 
     # Hard exclusions
     if any(b in domain for b in DOMAIN_BLACKLIST):
@@ -137,7 +141,7 @@ def score_url(url: str, npo_name: str, title: str, debug: bool = False) -> int:
         log("EXCLUDE: rejstrik/databaze in URL")
         return -100
 
-    # Soft penalties
+    # Penalties
     if query_string:
         score -= 20
         log("-20: has query string")
@@ -178,7 +182,8 @@ def score_url(url: str, npo_name: str, title: str, debug: bool = False) -> int:
         score -= 20
         log("-20: non-preferred TLD")
     else:
-        log("+0: preferred TLD")
+        score += 10
+        log("+10: preferred TLD")
 
     # Keyword and acronym matching
     clean_name = unidecode(clean_npo_name(npo_name).lower())
@@ -207,8 +212,7 @@ def score_url(url: str, npo_name: str, title: str, debug: bool = False) -> int:
             word_match = True
             log(f"+{bonus}: keyword '{kw}' in title {'(domain matched)' if domain_word_match else '(no domain match)'}")
 
-    # Acronym match against domain — handles cases like fknl.webnode.cz
-    # where domain_part is the subdomain 'fknl', not 'webnode'
+    # Acronym match against domain
     if len(acronym) >= 2 and acronym == domain_part:
         score += 20
         word_match = True
@@ -222,7 +226,7 @@ def score_url(url: str, npo_name: str, title: str, debug: bool = False) -> int:
         score -= 30
         log("-30: no domain word match")
 
-    log(f"── final score: {score}")
+    log(f"-- final score: {score}")
     return score
 
 
@@ -279,7 +283,7 @@ def _evaluate_results(results: list, npo_name: str) -> tuple[str | None, int, li
             domains_seen[domain] = (current_score, url)
 
     best_url = None
-    best_score = 10  # Score threshold below which we discard results
+    best_score = 10  # Score threshold below which resluts are discarded
     for _, (score, url) in domains_seen.items():
         if score > best_score:
             best_score = score
@@ -292,48 +296,37 @@ def get_url(npo_name: str) -> tuple[str | None, int]:
     """
     Discover the official website URL of a Czech nonprofit organization.
 
-    Issues a sequence of search queries with progressively broader phrasing and
-    returns the highest-scoring candidate from the first query that yields one.
+    Issues a search query and returns the highest-scoring candidate (if there is one).
 
     Returns:
-        str | None: The discovered URL (root form), or None if no satisfactory
-        candidate was found across all queries.
+        str | None: The discovered URL (root form), or None if no satisfactory candidate was found.
     """
-    search_name = clean_npo_name(npo_name)
-    
-    acronym_query = "".join(w[0] for w in search_name.split() if len(w) >= 3 or w.isupper() or w.lower() in ['sk', 'fk', 'tj'])
-    
-    queries = [search_name]
-    #if acronym_query and len(acronym_query) >= 2:
-    #    queries.append(acronym_query)
+    # Search query is the cleaned org name
+    query = clean_npo_name(npo_name)
 
     try:
-        for query in queries:
-            print(f"Searching Serper: '{query}'")
+        print(f"Searching Serper: '{query}'")
 
-            results = serper_search(query)
-            if not results:
-                print("  No results returned, trying next query...")
-                continue
+        results = serper_search(query)
+        if not results:
+            print("  No results returned, continuing...")
 
-            if _no_website_flag(results):
-                print(f"  Most results are blacklisted domains - likely no website exists.")
-                return None, 0
+        if _no_website_flag(results):
+            print(f"  Most results are blacklisted domains - likely no website exists.")
+            return None, 0
 
-            best_url, best_score, all_scored = _evaluate_results(results, npo_name)
+        best_url, best_score, all_scored = _evaluate_results(results, npo_name)
 
-            print(f"\n--- Results for '{npo_name}' (query: '{query}') ---")
-            for entry in sorted(all_scored, key=lambda x: x["score"], reverse=True):
-                print(f"  [{entry['score']:+d}] {entry['url']}")
-            print("-----------------------------------")
+        print(f"\n--- Results for '{npo_name}' ---")
+        for entry in sorted(all_scored, key=lambda x: x["score"], reverse=True):
+            print(f"  [{entry['score']:+d}] {entry['url']}")
+        print("-----------------------------------")
 
-            if best_url:
-                print(f"Found after query '{query}': '{best_url}' (score: {best_score})")
-                return best_url, best_score
+        if best_url:
+            print(f"Found after query '{query}': '{best_url}' (score: {best_score})")
+            return best_url, best_score
 
-            print("No sufficient URL found, trying next query...")
-
-        print(f"No URL found for '{npo_name}' across all queries.")
+        print(f"No URL found for '{npo_name}'.")
         return None, 0
 
     except Exception as e:

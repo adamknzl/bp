@@ -30,8 +30,10 @@ _LEGAL_FORM_SUFFIX_REGEX = re.compile(
 )
 
 _REGISTERED_OFFICE_REGEX = re.compile(r'(?i)se\s+sídlem.*')
+
 _EMAIL_REGEX = re.compile(r'[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}')
 _PHONE_REGEX = re.compile(r'(?:\+420|\+421)?[\s/]*\d{3}[\s/]*\d{3}[\s/]*\d{3}')
+
 _CONTACT_LINK_REGEX = re.compile(r'(kontakty?|spojen[ií]|napi[sš]te|kde n[aá]s)', re.IGNORECASE)
 
 def clean_npo_name(name: str) -> str:
@@ -50,7 +52,7 @@ def get_gps(address: str):
     """
     Geocode a postal address using Nominatim and return the location object.
 
-    Sleeps for 1 second to comply with the public Nominatim usage policy.
+    Sleeps for 1 second to comply with the Nominatim usage policy.
 
     Returns:
         geopy.location.Location | None: None if the address could not be resolved.
@@ -100,33 +102,6 @@ def format_address(row: dict) -> str:
     city_part = f"{psc} {city}".strip()
     return f"{street_part}, {city_part}".strip(', ')
 
-def format_size_category(category_code: str) -> dict:
-    """
-    Convert a ČSÚ size-category code to a structured dict with min/max employee count.
-
-    Returns:
-        dict: with keys label, min_emp, max_emp. Missing or invalid
-        codes gives an "Unknown" entry with None bounds.
-    """
-    raw = size_category.get(str(category_code))
-
-    if not raw or raw == "Neuvedeno":
-        return {"label": "Unknown", "min_emp": None, "max_emp": None}
-
-    if raw == "Bez zaměstnanců":
-        return {"label": "0 employees", "min_emp": 0, "max_emp": 0}
-
-    numbers = [int(s) for s in re.findall(r'\d+', raw.replace(" ", ""))]
-
-    if len(numbers) >= 2:
-        min_emp, max_emp = numbers[0], numbers[1]
-        return {"label": f"{min_emp}-{max_emp} employees", "min_emp": min_emp, "max_emp": max_emp}
-    if len(numbers) == 1:
-        min_emp = numbers[0]
-        return {"label": f"{min_emp}+ employees", "min_emp": min_emp, "max_emp": None}
-
-    return {"label": "Unknown", "min_emp": None, "max_emp": None}
-
 def get_html(html_string: str) -> str:
     """Strip <script>, <style> and <head> and return plain visible text."""
     if not html_string:
@@ -159,7 +134,7 @@ def fetch_contact_page(url: str) -> str | None:
 
             if _CONTACT_LINK_REGEX.search(link_text):
                 # Skip non-navigational hrefs (mailto, tel, JS handlers, anchors).
-                if href.lower().startswith(('mailto:', 'tel:', 'javascript:', '#')):
+                if href.lower().startswith(('mailto:', 'tel:', 'javascript:')):
                     continue
                 return urljoin(url, href)
     except requests.exceptions.RequestException as e:
@@ -180,7 +155,7 @@ def get_emails(page: str) -> list[str]:
 
 
 def get_tel_numbers(page: str) -> list[str]:
-    """Extract a deduplicated list of phone numbers (Czech / Slovak format) from text content."""
+    """Extract a deduplicated list of phone numbers from text content."""
     return _extract_unique(_PHONE_REGEX, page)
 
 
@@ -188,5 +163,4 @@ def get_web_content(url: str) -> str:
     """Fetch the URL and return the main content using the trafilatura library."""
     downloaded = fetch_url(url)
     result = extract(downloaded)
-    #print(f"  [trafilatura] downloaded: {len(downloaded) if downloaded else 0} chars, extracted: {len(result) if result else 0} chars")
     return result

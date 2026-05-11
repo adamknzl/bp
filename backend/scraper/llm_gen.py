@@ -20,8 +20,7 @@ load_dotenv()
 _MODEL = "gpt-4o-mini"
 _TEMPERATURE = 0.2
 
-# Categories the LLM is allowed to choose from.
-# Must remain in sync with the database codebook of categories.
+# Categories the LLM is allowed to choose from; must remain in sync with the database codebook of categories.
 _AVAILABLE_CATEGORIES = (
     "Sociální služby", "Vzdělávání", "Zdravotnictví", "Kultura", "Životní prostředí",
     "Sport", "Mládež", "Podpora seniorů", "Zdravotně postižení",
@@ -30,6 +29,8 @@ _AVAILABLE_CATEGORIES = (
 )
 
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+
+# Limiting number of output characters, having experienced slow response times from OpenAI API.
 _MAX_CONTENT_CHARS = 3000
 
 def _build_prompt(npo_name: str, web_content: str) -> str:
@@ -65,22 +66,20 @@ def _build_prompt(npo_name: str, web_content: str) -> str:
     {web_content}
     """
 
+# Random exponential waiting in case of slow response times.
 @retry(wait=wait_random_exponential(min=1, max=60), stop=stop_after_attempt(3))
 def generate(npo_name: str, web_content: str) -> dict:
     """
     Generate a description and category assignment for an NPO.
 
     The function fetches and extracts the textual content of the provided URL
-    and asks an OpenAI chat model to classify the organization and produce a
+    and asks the OpenAI API to classify the organization and produce a
     short description.
 
     Returns:
         dict: JSON object with keys categories (list[str]) and description (str).
     """
     trunc = (web_content or "")[:_MAX_CONTENT_CHARS]
-
-    #print(f"  [LLM] Content length: {len(trunc)} chars")
-    #print(f"  [LLM] Content preview: {trunc[:200]!r}")
 
     prompt = _build_prompt(npo_name, trunc)
 

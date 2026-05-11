@@ -17,7 +17,8 @@ bp_src/
 └── data/
     ├── seed.sql                — Database dump (ready to use)
     ├── res_data_sample.csv     — Sample of ČSÚ data for pipeline demo (1000 orgs)
-    └── ground_truth_urls.csv   — Ground truth dataset for URL accuracy evaluation
+    ├── ground_truth_urls.csv   — Manually verified URL evaluation dataset (Experiment 1)
+    └── llm_eval.csv            — Manually evaluated LLM output dataset (Experiment 2)
 ```
 
 ---
@@ -107,28 +108,45 @@ The sample dataset (`data/res_data_sample.csv`) is used automatically if present
 The full ČSÚ dataset (~500 MB) is downloaded automatically if no local file is found.
 
 ```bash
-# Process a limited number of organizations (recommended for testing)
-python main.py --limit 20
+# Process a limited number of organizations
+python3 main.py --limit 20
 
-# Process the full sample dataset
-python main.py
+# Process the full sample dataset in a single run
+python3 main.py
+
+# Process the full sample dataset in batches (recommended)
+# Runs the pipeline 15 times, processing 100 organizations per run.
+# Already-processed organizations are skipped automatically.
+chmod +x run.sh
+./run.sh
+
+# Custom number of runs and batch size
+./run.sh 20 50
 ```
 
-Press `CTRL+C` at any time to stop — progress is saved after each organization.
+Press `CTRL+C` at any time to stop — progress is saved at the end of each run. Re-running the pipeline will skip already-processed organizations automatically.
 
 ---
 
-## URL accuracy evaluation
+## Running the experiments
+
+Experiments are executed via the `experiments.py` module. The module runs
+sequentially: Experiment 1 (URL accuracy) first, then Experiment 2 (LLM quality).
+
+The pre-filled evaluation datasets (`ground_truth_urls.csv` and `llm_eval.csv`)
+are included in the submission under `backend/scraper/data/` and contain the
+complete manually verified results. Run the module to reproduce the experiment
+results immediately:
 
 ```bash
 cd backend/scraper
-
-# Copy ground truth dataset to the scraper directory
-cp ../../data/ground_truth_urls.csv data/ground_truth_urls.csv
-
-# Run pipeline first to generate fetched_urls.csv, then evaluate
-python eval_urls.py
+python3 experiments.py
 ```
+
+To run the experiments from scratch against a freshly populated database,
+delete both CSV files from `data/` and re-run the module. It will generate
+new evaluation files from the current database contents and prompt you to
+fill in the evaluation columns manually before producing results.
 
 ---
 
@@ -149,6 +167,7 @@ python eval_urls.py
 | `DB_PASSWORD` | PostgreSQL password |
 | `OPENAI_API_KEY` | OpenAI API key (pipeline only) |
 | `SERPER_API_KEY` | Serper API key (pipeline only) |
+| `SERPER_API_URL` | Serper API endpoint URL |
 
 ### `frontend/.env`
 

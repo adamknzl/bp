@@ -111,6 +111,7 @@ class LegalForm(Base):
 
     __tablename__ = "legal_form"
 
+    # Official RES code
     code: Mapped[str] = mapped_column(
         sa.String(10),
         primary_key=True
@@ -123,6 +124,7 @@ class SizeCategory(Base):
 
     __tablename__ = "size_category"
 
+    # Official RES code
     code: Mapped[str] = mapped_column(
         sa.String(10),
         primary_key=True

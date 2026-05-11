@@ -12,18 +12,18 @@ from collections import Counter
 from urllib.parse import urlparse
 
 
-# ─── Configuration ────────────────────────────────────────────────────────────
+# Configuration
 
 GROUND_TRUTH_FILE = 'data/ground_truth_urls.csv'
 LLM_EVAL_FILE     = 'data/llm_eval.csv'
 
 
-# ─── Shared URL normalization ─────────────────────────────────────────────────
+# Shared URL normalization
 
 def _normalize_url(url: str) -> str:
     """Reduce a URL to netloc + path for canonical comparison.
 
-    Strips protocol, www prefix, and trailing slash.
+    Strips protocol, www prefix, and trailing "/".
     """
     if not url:
         return ""
@@ -36,22 +36,14 @@ def _normalize_url(url: str) -> str:
     return netloc + path
 
 
-# ─── Experiment 1: URL accuracy ───────────────────────────────────────────────
+# Experiment 1: URL accuracy
 
-def get_ground_truth_sample(
-    output: str = GROUND_TRUTH_FILE,
-    n: int = 100,
-    seed: int = 42,
-) -> None:
+def get_ground_truth_sample(output: str = GROUND_TRUTH_FILE, n: int = 100, seed: int = 42) -> None:
     """Sample organizations from the database for URL discovery evaluation.
 
-    Samples both organizations with and without a discovered URL, writing
-    the pipeline's best_url result alongside an empty expected_url column
+    Samples both organizations with and without a discovered URL from the database,
+    writing the pipeline's best_url result alongside an empty expected_url column
     for manual verification.
-
-    Sampling from the database (rather than re-running get_url() live) ensures
-    the experiment reflects what the final system actually produced, and
-    includes the full distribution — organizations with and without websites.
 
     Args:
         output: Path to write the ground truth CSV.
@@ -95,7 +87,6 @@ def get_ground_truth_sample(
 
     print(f"\nWritten to '{output}'.")
     print("Fill in the 'expected_url' column manually, then re-run to evaluate.")
-    print("Leave expected_url empty for organizations that have no website.")
 
 
 def run_url_evaluation(ground_truth_file: str = GROUND_TRUTH_FILE) -> None:
@@ -109,6 +100,7 @@ def run_url_evaluation(ground_truth_file: str = GROUND_TRUTH_FILE) -> None:
     Rows where expected_url was not filled in are skipped.
     """
     def load_ground_truth(filename: str) -> list[dict]:
+        """Loads the Ground Truth file used for evaluation."""
         rows = []
         with open(filename, mode='r', encoding='utf-8') as f:
             reader = csv.DictReader(f, delimiter=';')
@@ -117,6 +109,7 @@ def run_url_evaluation(ground_truth_file: str = GROUND_TRUTH_FILE) -> None:
         return rows
 
     def normalize_name(name: str) -> str:
+        """Name normalization using regular expressions."""
         return re.sub(r',\s*', ', ', name).strip()
 
     try:
@@ -147,9 +140,9 @@ def run_url_evaluation(ground_truth_file: str = GROUND_TRUTH_FILE) -> None:
             true_negatives += 1
             print(f"[{i}] True negative: {name}")
 
-        # False positive: org has no website but pipeline returned something
+        # False positive: org has no website, but pipeline returned something
         elif expected.lower() == 'none' and actual:
-            print(f"[{i}] Fail (Wrong URL returned — org has no website): {name}")
+            print(f"[{i}] Fail (Wrong URL returned - org has no website): {name}")
             print(f"      Got: {actual}")
 
         # True positive: pipeline found the correct URL
@@ -157,7 +150,7 @@ def run_url_evaluation(ground_truth_file: str = GROUND_TRUTH_FILE) -> None:
             true_positives += 1
             print(f"[{i}] True positive: {name}")
 
-        # Failure: wrong URL returned, or website exists but wasn't found
+        # Failure: wrong URL returned; or a website exists, but wasn't found
         else:
             outcome = "Wrong URL returned" if actual else "Website missed"
             print(f"[{i}] Fail ({outcome}): {name}")
@@ -182,13 +175,9 @@ def run_url_evaluation(ground_truth_file: str = GROUND_TRUTH_FILE) -> None:
     print("=" * 50)
 
 
-# ─── Experiment 2: LLM quality ────────────────────────────────────────────────
+# Experiment 2: LLM quality
 
-def get_llm_eval_sample(
-    output: str = LLM_EVAL_FILE,
-    n: int = 100,
-    seed: int = 42,
-) -> None:
+def get_llm_eval_sample(output: str = LLM_EVAL_FILE, n: int = 100, seed: int = 42) -> None:
     """Sample organizations from the database for LLM output evaluation.
 
     Only samples organizations that have a generated description, since
@@ -217,6 +206,7 @@ def get_llm_eval_sample(
     finally:
         session.close()
 
+    # Considering only rows with a filled description
     eligible = [r for r in rows if r.description]
     sample   = random.sample(eligible, min(n, len(eligible)))
     print(f"Sampled {len(sample)} records with descriptions from the database.")
@@ -244,7 +234,7 @@ def run_llm_evaluation(eval_file: str = LLM_EVAL_FILE) -> None:
     """Parse and summarize the manually filled LLM evaluation CSV.
 
     Computes accuracy rates for descriptions and categories,
-    and breaks down failure modes for both.
+    and breaks down failure cases for both.
     """
     def load_eval(filename: str) -> list[dict]:
         rows = []
@@ -318,11 +308,11 @@ def run_llm_evaluation(eval_file: str = LLM_EVAL_FILE) -> None:
     print(f" Both valid:   {both_valid}  ({both_valid/evaluable*100:.1f}% of evaluable)")
 
 
-# ─── Entry point ──────────────────────────────────────────────────────────────
+# Entry point
 
 if __name__ == '__main__':
 
-    # ── Experiment 1 ──────────────────────────────────────────────────────────
+    # Experiment 1
     if not os.path.exists(GROUND_TRUTH_FILE):
         print("Ground truth file not found. Generating URL discovery sample...")
         get_ground_truth_sample()
@@ -331,7 +321,7 @@ if __name__ == '__main__':
         print(f"'{GROUND_TRUTH_FILE}' found. Running URL evaluation...")
         run_url_evaluation()
 
-        # ── Experiment 2 ──────────────────────────────────────────────────────
+        # Experiment 2
         if not os.path.exists(LLM_EVAL_FILE):
             print(f"\nLLM eval file not found. Generating sample from database...")
             get_llm_eval_sample()

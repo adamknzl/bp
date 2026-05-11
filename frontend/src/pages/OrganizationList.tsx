@@ -209,7 +209,7 @@ export default function OrganizationList() {
         {/* Main content */}
         <main className="w-full lg:w-3/4">
 
-          {/* GPS promo banner */}
+          {/* GPS banner */}
           {viewMode === 'all' && (
             <div className="bg-accent-light border border-accent rounded-xl p-6 mb-8 flex items-center justify-between">
               <div className="flex items-center gap-5">

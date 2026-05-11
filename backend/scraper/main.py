@@ -3,7 +3,7 @@
 @brief   Pipeline entry point: data acquisition, transformation, enrichment, and persistence.
 @author  Adam Kinzel (xkinzea00)
 
-This module orchestrates the full ETL pipeline. Source data is ingested from
+This module controls the full ETL pipeline. Source data is obtained from
 the official ČSÚ register, augmented with web search and LLM-based enrichment,
 and persisted to a relational database.
 """
@@ -43,17 +43,18 @@ from utils import (
     get_web_content,
 )
 
+# Configuration
 
 _CSV_SOURCE_URL = 'https://opendata.csu.gov.cz/soubory/od/od_org03/res_data.csv'
 _CSV_LOCAL_FILENAME = "data/res_data_sample.csv"
 
-# Legal form codes considered as nonprofit organizations (ČSÚ codebook).
+# Legal form codes considered as nonprofit organizations (ČSÚ codebook)
 _NPO_LEGAL_FORM_CODES = (117, 118, 141, 161, 706, 721, 722, 736)
 
-# Code 736 = "Pobočný spolek" (branch entity), processed in a second pass after parents.
+# Code 736 = "Pobočný spolek" (branch entity), processed in a second pass after parents
 _BRANCH_LEGAL_FORM_CODE = 736
 
-# Static codebook content uploaded into the database during setup.
+# Static codebook content uploaded into the database during setup
 _LEGAL_FORMS_DATA = {
     "117": "Nadace",
     "118": "Nadační fond",
@@ -161,11 +162,11 @@ def _resolve_url(row: dict, ico_val: str, parent_id, session, description_refres
     Determine the website URL of an organization, reusing cached values when possible.
 
     If description_refresh is True, only the stored URL is returned and no
-    fresh search is issued. Used when regenerating descriptions without
+    fresh search is issued. Used for regenerating descriptions without
     touching URL discovery results.
 
     If the organization is already in the database, its stored URL is reused.
-    Otherwise a fresh search is issued. As a fallback, branches inherit the URL
+    Otherwise a new search is executed. As a fallback, branches inherit the URL
     of their parent organization.
     """
     existing_url = session.execute(
@@ -199,7 +200,7 @@ def _resolve_description(row: dict, ico_val: str, web_content: str | None, sessi
 
     Returns:
         tuple: (description, categories). categories is None when the
-        record already has a description in the database (i.e. nothing to upsert).
+        record already has a description in the database.
     """
     existing_desc = session.execute(
         select(Organization.description).where(Organization.ico == ico_val)
@@ -218,7 +219,10 @@ def _resolve_description(row: dict, ico_val: str, web_content: str | None, sessi
 
 
 def _extract_contact_info(branch_url: str) -> tuple[list[str], list[str]]:
-    """Fetch the organization's contact page and extract emails and phone numbers."""
+    """
+    Fetch the organization's contact page and extract emails and phone numbers.
+    Extraction using regular expressions is encapsulated in get_emails() and get_tel_numbers() functions.
+    """
     contact_page_url = fetch_contact_page(branch_url)
     target_url = contact_page_url or branch_url
     if not target_url:
@@ -254,7 +258,7 @@ def _upsert_organization(org_data: dict, session) -> str | None:
 
 
 def _link_categories(org_id, categories: list[str], session) -> None:
-    """Attach a list of category names to an organization (no-op for unknown names)."""
+    """Attach a list of category names to an organization."""
     for category_name in categories:
         cat_id = session.execute(
             select(Category.category_id).where(Category.name == category_name)
@@ -268,15 +272,13 @@ def _link_categories(org_id, categories: list[str], session) -> None:
         session.execute(stmt)
 
 
-def process_insert_org(row: dict, source_id, session, parent_id=None):
+def process_insert_org(row: dict, source_id, session, parent_id=None) -> str | None:
     """
-    Run the full per-organization pipeline (URL search, LLM, contacts, persistence).
+    Run the full per-organization pipeline (URL search, LLM, contacts, persistence) and return UUID of organization.
 
     Skips organizations missing an IČO or in liquidation, or those for which the
     LLM step returned no categories.
     """
-    VERIFY_SCORE_THRESHOLD = 80 # skip verification for very high confidence matches
-
     ico_val = _parse_zfilled_code(row.get('ICO'), width=8)
     if ico_val is None:
         return None
@@ -287,7 +289,7 @@ def process_insert_org(row: dict, source_id, session, parent_id=None):
     legal_form_code = _parse_zfilled_code(row.get('FORMA'), width=3)
     size_cat_code = _parse_zfilled_code(row.get('KATPO'), width=3)
 
-    branch_url, best_score = _resolve_url(row, ico_val, parent_id, session, description_refresh=True)
+    branch_url, best_score = _resolve_url(row, ico_val, parent_id, session, description_refresh=False)
 
     web_content = None
     if branch_url:
@@ -302,6 +304,7 @@ def process_insert_org(row: dict, source_id, session, parent_id=None):
     lat = location.latitude if location else None
     lon = location.longitude if location else None
 
+    # Preparing upsert data
     org_data = {
         "source_id": source_id,
         "parent_id": parent_id,
@@ -384,11 +387,13 @@ def _find_parent_for_branch(parent_name_guess: str, session):
 def init_pipeline(npo_data: pd.DataFrame | None, args) -> None:
     """Run the two-pass pipeline: parents first, then branches with parent linking."""
 
-    run_num   = os.getenv("RUN_NUMBER", "?")
+    # For executing the script using run.sh - multiple executions in a row 
+    # to ensure that all data is not lost in the case of an error.
+    run_num = os.getenv("RUN_NUMBER", "?")
     total_runs = os.getenv("TOTAL_RUNS", "?")
-    print(f"{'='*40}")
+    print(f"{'='*50}")
     print(f" Pipeline run {run_num} / {total_runs}")
-    print(f"{'='*40}")
+    print(f"{'='*50}")
 
     if npo_data is None or npo_data.empty:
         print("No data to process.")
@@ -425,7 +430,7 @@ def init_pipeline(npo_data: pd.DataFrame | None, args) -> None:
 
         current_processing_idx = 0
 
-        # First pass - parent organizations.
+        # First pass - parent organizations
         for row in records:
             if row.get('FORMA') != _BRANCH_LEGAL_FORM_CODE:
                 current_processing_idx += 1
@@ -434,7 +439,7 @@ def init_pipeline(npo_data: pd.DataFrame | None, args) -> None:
                 process_insert_org(row, source.source_id, session)
         session.commit()
 
-        # Second pass - branches linked to their parents.
+        # Second pass - branches linked to their parents
         for row in records:
             if row.get('FORMA') == _BRANCH_LEGAL_FORM_CODE:
                 current_processing_idx += 1
@@ -447,14 +452,11 @@ def init_pipeline(npo_data: pd.DataFrame | None, args) -> None:
 
         print("Data import successful.")
     except Exception as e:
-        session.rollback()
-        #print(f"Error during import: {e}")
-        import traceback
-        traceback.print_exc()  # replace the print(f"Error during import: {e}") line
+        print(f"Error during import: {e}")
     finally:
         session.close()
 
-# Main entry point.
+# Main entry point
 if __name__ == "__main__":
     args = argument_parsing.parse()
 

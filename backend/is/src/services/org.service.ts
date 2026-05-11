@@ -1,3 +1,14 @@
+/**
+ * @file   org.service.ts
+ * @brief  Database access layer for the organization resource.
+ * @author Adam Kinzel (xkinzea00)
+ *
+ * All Prisma queries are centralised here. Controllers delegate to these
+ * functions and never interact with the database client directly.
+ * The Prisma client is initialised once at module level using the PrismaPg
+ * adapter backed by a pg connection pool, enabling connection reusing.
+ */
+
 import 'dotenv/config';
 import { Pool } from 'pg';
 import { PrismaPg } from '@prisma/adapter-pg';
@@ -11,6 +22,7 @@ const adapter = new PrismaPg(pool);
 
 const prisma = new PrismaClient({ adapter });
 
+/** Return all legal form codebook entries ordered alphabetically by name. */
 export const getLegalForms = async () => {
     try {
         return await prisma.legal_form.findMany({
@@ -22,6 +34,13 @@ export const getLegalForms = async () => {
     }
 };
 
+/**
+ * Return a paginated, optionally filtered list of organizations.
+ *
+ * Each record includes its thematic categories, legal form, and size category
+ * via Prisma's nested include. The filters argument is a raw Prisma where-clause
+ * object constructed by the controller layer.
+ */
 export const getOrganizations = async (
     page: number = 1,
     pageSize: number = 24,
@@ -30,6 +49,7 @@ export const getOrganizations = async (
     try {
         const skip = (page - 1) * pageSize;
 
+        // Execute count and data queries concurrently to minimize latency
         const [organizations, total] = await Promise.all([
             prisma.organization.findMany({
                 include: {
@@ -62,6 +82,13 @@ export const getOrganizations = async (
     }
 };
 
+/**
+ * Return the full detail of a single organization by its UUID.
+ *
+ * Includes thematic categories, physical branches, child organizations
+ * in the parent-branch hierarchy, and both codebook relations.
+ * Returns null when no record matches the given ID.
+ */
 export const getOrganizationById = async (id: string) => {
     try {
         const organization = await prisma.organization.findUnique({
@@ -85,6 +112,7 @@ export const getOrganizationById = async (id: string) => {
     }
 }
 
+/** Permanently delete an organization record by its UUID. */
 export const deleteOrganization = async (id: string) => {
     try {
         const organization = await prisma.organization.delete({
@@ -99,6 +127,7 @@ export const deleteOrganization = async (id: string) => {
     }
 };
 
+/** Return all thematic category entries ordered alphabetically by name. */
 export const getCategories = async () => {
     try {
         return await prisma.category.findMany({
@@ -110,6 +139,10 @@ export const getCategories = async () => {
     }
 };
 
+/**
+ * Return all size category codebook entries ordered by minimum employee count.
+ * Null min_emp values (the "Neuvedeno" entry) sort to the end.
+ */
 export const getSizeCategories = async () => {
     try {
         return await prisma.size_category.findMany({
@@ -121,6 +154,19 @@ export const getSizeCategories = async () => {
     }
 };
 
+/**
+ * Return organizations within a given radius of the supplied GPS coordinates.
+ *
+ * Distance is computed on the database side using the Haversine formula,
+ * which calculates the great-circle (straight-line) distance between two
+ * points on the Earth's surface given their latitude and longitude.
+ *
+ * Because Prisma does not natively support computed columns in ORDER BY,
+ * the query is executed in two steps:
+ * 1. A raw SQL query computes distances and returns matching organization IDs.
+ * 2. A standard Prisma query fetches the full records with relational data
+ *    for those IDs, after which distances are re-attached and results re-sorted.
+ */
 export const getNearbyOrganizations = async (
     lat: number,
     lon: number,
@@ -162,6 +208,7 @@ export const getNearbyOrganizations = async (
             }
         });
 
+        // Re-attach computed distances and sort ascending by distance.
         const distanceMap = new Map(
             organizations.map(o => [o.organization_id, o.distance_km])
         );
