@@ -186,7 +186,7 @@ def run_url_evaluation(ground_truth_file: str = GROUND_TRUTH_FILE) -> None:
 
 def get_llm_eval_sample(
     output: str = LLM_EVAL_FILE,
-    n: int = 50,
+    n: int = 100,
     seed: int = 42,
 ) -> None:
     """Sample organizations from the database for LLM output evaluation.
@@ -251,7 +251,7 @@ def run_llm_evaluation(eval_file: str = LLM_EVAL_FILE) -> None:
         with open(filename, 'r', encoding='utf-8') as f:
             reader = csv.DictReader(f, delimiter=';')
             for row in reader:
-                rows.append({k: v.strip().strip('"') for k, v in row.items() if k})
+                rows.append({k: (v or '').strip().strip('"') for k, v in row.items() if k})
         return rows
 
     def classify(value: str) -> str:

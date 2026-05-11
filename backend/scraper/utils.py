@@ -186,4 +186,7 @@ def get_tel_numbers(page: str) -> list[str]:
 
 def get_web_content(url: str) -> str:
     """Fetch the URL and return the main content using the trafilatura library."""
-    return extract(fetch_url(url))
+    downloaded = fetch_url(url)
+    result = extract(downloaded)
+    #print(f"  [trafilatura] downloaded: {len(downloaded) if downloaded else 0} chars, extracted: {len(result) if result else 0} chars")
+    return result

@@ -78,6 +78,10 @@ def generate(npo_name: str, web_content: str) -> dict:
         dict: JSON object with keys categories (list[str]) and description (str).
     """
     trunc = (web_content or "")[:_MAX_CONTENT_CHARS]
+
+    #print(f"  [LLM] Content length: {len(trunc)} chars")
+    #print(f"  [LLM] Content preview: {trunc[:200]!r}")
+
     prompt = _build_prompt(npo_name, trunc)
 
     response = client.chat.completions.create(

@@ -156,9 +156,13 @@ def upsert_categories() -> None:
         session.close()
 
 
-def _resolve_url(row: dict, ico_val: str, parent_id, session) -> tuple[str | None, int]:
+def _resolve_url(row: dict, ico_val: str, parent_id, session, description_refresh: bool = False) -> tuple[str | None, int]:
     """
     Determine the website URL of an organization, reusing cached values when possible.
+
+    If description_refresh is True, only the stored URL is returned and no
+    fresh search is issued. Used when regenerating descriptions without
+    touching URL discovery results.
 
     If the organization is already in the database, its stored URL is reused.
     Otherwise a fresh search is issued. As a fallback, branches inherit the URL
@@ -167,9 +171,13 @@ def _resolve_url(row: dict, ico_val: str, parent_id, session) -> tuple[str | Non
     existing_url = session.execute(
         select(Organization.web_url).where(ico_val == Organization.ico)
     ).scalar()
+
+    if description_refresh:
+        return existing_url, 999
+
     if existing_url is not None:
         print(f"Organization {row.get('FIRMA')} has a URL in database, skipping search...")
-        return existing_url, 999  # already verified, treat as max confidence
+        return existing_url, 999
 
     url, score = get_url(row.get('FIRMA'))
 
@@ -179,7 +187,7 @@ def _resolve_url(row: dict, ico_val: str, parent_id, session) -> tuple[str | Non
         ).scalar()
         if parent_url:
             print(f"Branch inherits URL from parent: {parent_url}")
-            return parent_url, 999  # inherited, treat as trusted
+            return parent_url, 999
 
     return url, score
 
@@ -279,13 +287,13 @@ def process_insert_org(row: dict, source_id, session, parent_id=None):
     legal_form_code = _parse_zfilled_code(row.get('FORMA'), width=3)
     size_cat_code = _parse_zfilled_code(row.get('KATPO'), width=3)
 
-    branch_url, best_score = _resolve_url(row, ico_val, parent_id, session)
+    branch_url, best_score = _resolve_url(row, ico_val, parent_id, session, description_refresh=True)
 
     web_content = None
     if branch_url:
         web_content = get_web_content(branch_url)
 
-    description, categories = _resolve_description(row, ico_val, branch_url, session)
+    description, categories = _resolve_description(row, ico_val, web_content, session)
 
     emails, tel_numbers = _extract_contact_info(branch_url)
 
@@ -396,15 +404,16 @@ def init_pipeline(npo_data: pd.DataFrame | None, args) -> None:
         session.add(source)
         session.flush()
 
-        existing_icos = set(
-            row[0] for row in session.execute(select(Organization.ico)).all()
+        existing_icos_with_desc = set(
+            row[0] for row in session.execute(
+                select(Organization.ico).where(Organization.description.isnot(None))
+            ).all()
         )
-
         records = [
             r for r in npo_data.to_dict(orient='records')
-            if _parse_zfilled_code(r.get('ICO'), width=8) not in existing_icos
+            if _parse_zfilled_code(r.get('ICO'), width=8) not in existing_icos_with_desc
         ]
-        print(f"{len(records)} unprocessed organizations remaining.")
+        print(f"{len(records)} organizations without descriptions remaining.")
 
         # If the script is executed with the -l argument,
         # a randomly selected sample of the given amount

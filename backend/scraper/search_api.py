@@ -271,7 +271,7 @@ def _evaluate_results(results: list, npo_name: str) -> tuple[str | None, int, li
         if not url:
             continue
 
-        current_score = score_url(url, npo_name, title, debug=True)
+        current_score = score_url(url, npo_name, title, debug=False)
         all_scored.append({"url": url, "score": current_score})
 
         domain = urlparse(url).netloc.lower()
